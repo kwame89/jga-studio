@@ -1,48 +1,43 @@
 {
   "expo": {
-    "name": "jga-studio",
+    "name": "JGA Studio",
     "slug": "jga-studio",
+    "newArchEnabled": false,
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icon.png",
     "scheme": "jgastudio",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F8F5F0"
     },
     "plugins": [
-      "expo-router",
       [
-        "expo-splash-screen",
+        "@stripe/stripe-react-native",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "merchantIdentifier": "merchant.com.jgastudio"
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-font",
+      "expo-router"
     ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+    "ios": {
+      "bundleIdentifier": "com.jaygolding.jgastudio",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "JGA Studio uses the camera so collectors can upload profile photos and share artwork-related images when features requiring image capture are enabled."
+      }
+    },
+    "android": {
+      "package": "com.jaygolding.jgastudio"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "30c25f9b-f53d-4493-8e74-3e41196cf78d"
+      }
     }
   }
 }
