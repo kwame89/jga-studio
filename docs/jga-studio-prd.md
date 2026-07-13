@@ -1,16 +1,26 @@
 # JGA Studio App PRD
 
-Version: 0.1 draft  
-Date: 2026-07-12  
+Version: 0.2 draft  
+Date: 2026-07-13  
 Prepared from local app inspection of `/Users/jaygolding/jga-studio`
 
 ## 1. Product Summary
 
 JGA Studio is a collector-facing mobile app for discovering, saving, buying, bidding on, and being rewarded for Jay Golding artwork. The current app is already more than a portfolio: it combines artwork browsing, Stripe checkout, collector profiles, Privy login, embedded wallets on Base, token balances, reward claims, QR-based sending/receiving, and an auction surface that is ready for deeper bidding functionality.
 
-The next product step is to turn this from a promising local build into a dependable studio commerce and collector relationship platform.
+The next product step is another private beta version with meaningful product updates. The beta should turn the current promising local build into a dependable studio commerce and collector relationship platform, with wallet-based rewards treated as a central part of the collector experience.
 
-## 2. Product Vision
+## 2. Confirmed Product Direction
+
+Confirmed by Jay on 2026-07-13:
+
+- Next milestone: another private beta version with updates.
+- Wallet and reward features are central to the collector experience.
+- After a confirmed purchase, the artwork should be marked sold automatically.
+- Auctions should be built to work properly when an artwork is ready to auction, but there is no real auction need until the app is finished and live.
+- The admin side should live inside the app, visible and available only to the admin account owner.
+
+## 3. Product Vision
 
 Create a direct collector channel for JGA Studio where collectors can:
 
@@ -22,7 +32,7 @@ Create a direct collector channel for JGA Studio where collectors can:
 
 For the studio, the app should become a lightweight operating system for releases, inventory, sales, collectors, auctions, and rewards.
 
-## 3. Current App Snapshot
+## 4. Current App Snapshot
 
 ### Platform
 
@@ -65,7 +75,7 @@ Likely missing or not yet visible:
 - Admin inventory actions
 - Audit logs
 
-## 4. Primary Users
+## 5. Primary Users
 
 ### Collector
 
@@ -83,23 +93,25 @@ A collector who has purchased before and wants purchase history, rewards, early 
 
 A collector who wants to watch lots, bid, receive reminders, and settle purchases after winning.
 
-## 5. Product Goals
+## 6. Product Goals
 
 - Make the app trustworthy enough for real art purchases.
 - Support a clean collector journey from discovery to purchase confirmation.
-- Give collectors a reason to return through saved works, notifications, rewards, and auctions.
+- Make wallet-based rewards a central reason collectors return and stay connected to the studio.
+- Give collectors a reason to return through saved works, notifications, rewards, and future auctions.
 - Give the studio clear operational control over inventory, orders, collectors, and releases.
-- Keep wallet and token features useful without making them mandatory for non-crypto collectors.
+- Keep the private beta focused on a polished collector loop before public launch.
 
-## 6. Non-Goals For The Near Term
+## 7. Non-Goals For The Near Term
 
 - Full public social network features.
 - Marketplace support for artists beyond JGA Studio.
 - Complex DeFi or speculative token mechanics.
 - Fully decentralized commerce.
 - Replacing accounting, tax, or shipping software entirely.
+- Live public auctions before the app is ready for finished, trustworthy auction behavior.
 
-## 7. Core User Journeys
+## 8. Core User Journeys
 
 ### Browse And Buy Artwork
 
@@ -108,7 +120,7 @@ A collector who wants to watch lots, bid, receive reminders, and settle purchase
 3. Collector opens an artwork detail page.
 4. Collector reviews images, story, price, dimensions, condition, signature, and shipping estimate.
 5. Collector checks out with Stripe.
-6. App confirms purchase and updates artwork availability.
+6. App confirms purchase and automatically marks the artwork sold.
 7. Collector sees purchase in profile.
 8. Studio receives the order and fulfillment details.
 
@@ -146,7 +158,7 @@ A collector who wants to watch lots, bid, receive reminders, and settle purchase
 4. Collector claims rewards to connected wallet.
 5. App records claim status and transaction hash.
 
-## 8. Existing MVP Capabilities
+## 9. Existing MVP Capabilities
 
 ### Catalog And Discovery
 
@@ -189,7 +201,7 @@ A collector who wants to watch lots, bid, receive reminders, and settle purchase
 - Reward summary and claim flow.
 - Dark mode toggle.
 
-## 9. Required Next-Level Capabilities
+## 10. Required Next-Level Capabilities
 
 ### P0 - Stabilize Real Commerce
 
@@ -199,7 +211,7 @@ Requirements:
 
 - Create an `orders` or `purchases` table.
 - Create a server-side purchase confirmation path using Stripe webhooks.
-- Mark artwork as reserved, sold, or available based on payment state.
+- Mark artwork sold automatically after confirmed payment.
 - Prevent double purchases of the same artwork.
 - Store buyer identity, payment status, artwork id, amount, currency, and fulfillment status.
 - Add purchase history to profile.
@@ -211,7 +223,7 @@ Acceptance criteria:
 
 - A collector can purchase one available artwork.
 - Payment success creates a durable order record.
-- The purchased artwork is no longer purchasable by another collector.
+- The purchased artwork is automatically marked sold and is no longer purchasable by another collector.
 - The collector can see the purchase in profile.
 - The studio can see the order and fulfillment details.
 
@@ -277,9 +289,9 @@ Auction fields to confirm:
 - Winning bidder
 - Settlement status
 
-### P1 - Build Studio Admin Workflows
+### P1 - Build In-App Studio Admin Workflows
 
-The product needs a way for the studio to manage the app without editing database rows manually.
+The product needs an admin side inside the app, visible only to the admin account owner, so the studio can manage the app without editing database rows manually.
 
 Requirements:
 
@@ -291,12 +303,13 @@ Requirements:
 - View collectors and purchase history.
 - Trigger or schedule notifications.
 - Create reward events manually or from purchase events.
+- Gate the admin area by a durable admin role, not only by visible navigation.
 
-Possible implementation paths:
+Implementation direction:
 
 - In-app hidden admin section.
-- Separate web admin portal.
-- Supabase Studio plus lightweight custom admin screens.
+- Admin-only navigation and screens available to the authorized admin account owner.
+- Supabase Studio may still be useful during development, but should not be the long-term day-to-day admin UI.
 
 ### P1 - Make Notifications Real
 
@@ -312,7 +325,7 @@ Requirements:
 
 ### P1 - Complete Auction System
 
-The auction surface is ready, but bidding is not implemented.
+The auction surface is ready, but bidding is not implemented. Auctions should be built as a future-ready feature set that behaves correctly once the app is finished and an artwork is actually ready to auction.
 
 Requirements:
 
@@ -324,6 +337,7 @@ Requirements:
 - Add outbid and ending-soon reminders.
 - Add settlement flow for winning bidders.
 - Add admin lot management.
+- Keep real bidding disabled in the private beta until the auction flow is complete and trustworthy.
 
 Acceptance criteria:
 
@@ -334,7 +348,7 @@ Acceptance criteria:
 
 ### P1 - Clarify Rewards And Token Utility
 
-The app already includes meaningful reward infrastructure, but the product rules need definition.
+The app already includes meaningful reward infrastructure, and wallet-based rewards are a central part of the collector experience. The product rules still need definition.
 
 Questions to resolve:
 
@@ -343,7 +357,7 @@ Questions to resolve:
 - Are rewards tied only to purchases or also to bids, attendance, referrals, and drops?
 - Are rewards claimable immediately or after fulfillment?
 - Are there legal or financial disclaimers needed?
-- Should fiat-only collectors see token features by default?
+- How should non-crypto collectors be introduced to wallet rewards without confusion?
 
 Requirements:
 
@@ -378,7 +392,7 @@ Requirements:
 - Collector notes for admin.
 - Collector status tiers, if desired.
 
-## 10. Risks And Gaps Found In Current Build
+## 11. Risks And Gaps Found In Current Build
 
 - Payment success currently appears to create a PaymentIntent, but no complete order/inventory update flow is visible.
 - Stripe webhook handling is not visible in the inspected files.
@@ -395,7 +409,7 @@ Requirements:
 - Web checkout is intentionally unavailable.
 - No schema/migration files were visible in the inspected set.
 
-## 11. Success Metrics
+## 12. Success Metrics
 
 ### Collector Engagement
 
@@ -430,28 +444,30 @@ Requirements:
 - Claim rate.
 - Failed claim rate.
 - Reward-driven repeat visits.
+- Wallet activation rate.
+- Repeat engagement from reward holders.
 
-## 12. Recommended Roadmap
+## 13. Recommended Roadmap
 
-### Phase 0 - Product Alignment And Data Model
+### Phase 0 - Private Beta Update Planning
 
-- Confirm user personas and launch audience.
+- Confirm the exact private beta scope.
 - Finalize inventory, order, bid, collector, notification, and reward schemas.
 - Decide Privy/Supabase auth architecture.
-- Define what wallet/token features mean for non-crypto collectors.
+- Define the wallet/reward onboarding experience for beta collectors.
 
-### Phase 1 - Collector Commerce MVP
+### Phase 1 - Private Beta Commerce Core
 
 - Complete purchase lifecycle.
-- Add order records and inventory locking.
+- Add order records and automatic sold status after confirmed payment.
 - Add purchase history.
 - Add studio order visibility.
 - Harden security and environment configuration.
-- Keep auction bidding disabled until the commerce core is safe.
+- Keep real auction bidding disabled until the full auction flow is ready.
 
-### Phase 2 - Studio Operations
+### Phase 2 - In-App Admin Operations
 
-- Build admin artwork management.
+- Build admin-only in-app artwork management.
 - Build order management.
 - Add collector profile management.
 - Add notification preferences and basic in-app notifications.
@@ -463,14 +479,14 @@ Requirements:
 - Add settlement.
 - Add admin auction tools.
 
-### Phase 4 - Rewards And Collector Club
+### Phase 4 - Wallet Rewards And Collector Club
 
 - Connect purchase events to rewards.
-- Clarify token utility and disclaimers.
+- Clarify token utility, reward rules, and disclaimers.
 - Add reward history and transaction tracking.
 - Consider collector tiers, early access, and private release features.
 
-### Phase 5 - Public Launch Polish
+### Phase 5 - Public Launch Readiness
 
 - App Store/TestFlight readiness.
 - Web role decision.
@@ -478,35 +494,36 @@ Requirements:
 - Legal/privacy/support flows.
 - Analytics dashboard.
 
-## 13. Key Questions For Jay
+## 14. Answered Product Questions
 
-1. What is the first real launch target: private TestFlight beta, App Store release, web preview, or internal studio tool?
-2. Should the app feel more like a luxury gallery marketplace, an experimental artist studio, a collector club, or a crypto-native collecting experience?
-3. Is the primary goal short-term sales, collector relationship management, auction experiments, token/reward utility, or all of these in phases?
-4. Should wallet creation be optional for collectors who only want to buy with a card?
-5. What should happen after a collector buys a work: immediate sold status, reserved until fulfillment review, or manual studio approval?
-6. Do you need shipping, tax, and fulfillment built into the app, or should the app only collect payment and notify you?
-7. Are auctions intended to be real timed auctions with binding bids, or more like inquiry/interest-gathering events at first?
-8. Should JGA Studio token rewards have monetary utility, access utility, discount utility, collector status utility, or symbolic/community utility?
-9. Do you want an in-app admin panel, a separate web admin, or a lightweight backend workflow using Supabase first?
-10. What artwork data source should be considered the source of truth: Supabase, a spreadsheet, Airtable/Notion, another inventory system, or manual in-app entry?
-11. What notification channels matter most: in-app, push, email, or SMS?
-12. Should web checkout be supported, or should the web version remain browse-only for now?
-13. Is `jgastudio2@gmail.com` the long-term admin account, or just a temporary development shortcut?
-14. Should rewards be created automatically after payment, only after fulfillment, or manually by the studio?
-15. What does "next level" mean for the next milestone: stable real sales, a polished collector app, auction functionality, admin tooling, or launch readiness?
+1. Next milestone: another private beta version with updates.
+2. Wallet and reward features: central to the collector experience.
+3. Post-purchase artwork status: automatically sold after confirmed purchase.
+4. Auction direction: build the feature to work correctly when real auction-ready works exist; no real auction needed before the app is finished and live.
+5. Admin direction: admin side should be inside the app and visible only to the admin account owner.
 
-## 14. Suggested Immediate Build Priorities
+## 15. Remaining Product Questions
+
+1. Should wallet creation be required for every beta collector, or should it happen after purchase/reward eligibility?
+2. Do you need shipping, tax, and fulfillment built into the beta, or should the beta collect payment and notify the studio first?
+3. What notification channels matter most for beta: in-app, push, email, or SMS?
+4. What artwork data source should be the source of truth: Supabase, spreadsheet, Airtable/Notion, another inventory system, or in-app admin entry?
+5. Is `jgastudio2@gmail.com` the long-term admin account, or a temporary development shortcut?
+6. Should rewards be created automatically after payment, only after fulfillment, or manually by the studio?
+7. What should JGA Studio token rewards unlock first: access, status, discounts, early releases, private drops, or symbolic collector recognition?
+
+## 16. Suggested Immediate Build Priorities
 
 1. Add a real order/purchase lifecycle.
 2. Lock artwork availability during checkout and mark sold after payment confirmation.
 3. Add purchase history to profile.
 4. Fix Privy/Supabase identity integration.
 5. Replace mock/stub admin and notification flows with real data-backed flows.
-6. Decide whether auctions and rewards ship in MVP or remain beta/future features.
-7. Create a studio admin path for artwork and order management.
+6. Keep auctions future-ready but disabled for real bidding until the complete auction flow is finished.
+7. Create an in-app admin path for artwork and order management, visible only to the admin owner.
+8. Make wallet reward activation part of the beta collector onboarding and post-purchase experience.
 
-## 15. Source Files Inspected
+## 17. Source Files Inspected
 
 - `/Users/jaygolding/jga-studio/package.json`
 - `/Users/jaygolding/jga-studio/app.json`
