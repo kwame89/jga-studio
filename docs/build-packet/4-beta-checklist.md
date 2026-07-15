@@ -12,6 +12,7 @@ inert or manual — never silently broken.
 - [ ] USDC-on-Base rail (quote, tx submit, server-side confirmation cron)
 - [ ] Orphaned-payment reconciliation queue
 - [ ] Self-serve pre-ship cancel; admin crypto-refund recording
+- [ ] `shipping_rates` seeded (zone × bucket); quote-only combos block instant checkout; DDU notice at checkout
 - [ ] `webhook_events` idempotency on every handler
 - [ ] Auto-complete orders 30 days after delivered
 

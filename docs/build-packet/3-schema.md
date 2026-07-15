@@ -9,6 +9,8 @@ units; token amounts = 18-decimal `numeric(78,0)`-style bigints stored as
 ```sql
 -- enums
 create type art_kind as enum ('original','edition');
+create type size_bucket as enum ('print','small','medium','large');
+create type ship_zone as enum ('us','canada','international');
 create type art_status as enum ('draft','available','held','on_auction','sold','archived');
 create type order_source as enum ('direct','auction');
 create type order_status as enum ('pending_payment','paid','preparing','shipped',
@@ -54,6 +56,7 @@ create table user_roles (
 create table art_pieces (
   title text not null, description text, medium text, dimensions text, year int,
   kind art_kind not null,
+  size_bucket size_bucket not null default 'small',   -- drives shipping rates
   status art_status not null default 'draft',
   price_cents int,
   edition_size int, editions_sold int not null default 0,
@@ -100,6 +103,15 @@ create table payments (
 );
 create unique index one_success_per_order on payments (order_id)
   where status = 'succeeded';
+
+create table shipping_rates (          -- admin-editable config
+  zone ship_zone not null,
+  size_bucket size_bucket not null,
+  amount_cents int,                    -- NULL = quote only: block instant checkout
+  unique (zone, size_bucket)
+);
+-- seed: print 1500/3000/5000 · small 5000/9000/15000 ·
+--       medium 10000/18000/30000 · large 25000/NULL/NULL (us/canada/intl)
 
 create table webhook_events (
   source webhook_source not null,

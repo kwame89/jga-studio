@@ -42,6 +42,22 @@ spec gets a changelog entry.
    is available any time before the piece ships.
 9. **Shipping is manual in beta 2** — admin marks shipped/delivered by hand;
    no carrier API.
+10. **Token verified onchain (2026-07-15):** `jga_studio` ERC-20 at
+    `0xcc3b754f6f3c508518ba7d0920f944d800c14b9a` on Base — 18 decimals,
+    1,000,000,000 pre-minted supply. Claims are **transfers from a rewards
+    wallet**, not mints. Commerce treasury:
+    `0x30c92610f22203a728f4762e40d23a652feba946` (verified EIP-7702 smart
+    wallet; holds zero ETH, so outbound transfers need gas funding or a
+    paymaster).
+11. **Buyer's premium: 0% in beta 2.** Major houses charge 26–28% as
+    intermediaries; an artist-direct studio gains nothing but opacity from
+    one. Config value `buyers_premium_bps = 0` so it's a setting, not a
+    rebuild.
+12. **Shipping policy: buyer pays, tiered flat rates** by size bucket ×
+    zone (US / Canada / International), insured to sale value, **DDU** —
+    import duties/taxes are the collector's responsibility (industry norm,
+    cf. Saatchi Art). Large originals ship internationally **by quote only**
+    in beta 2.
 
 ## Conventions used across all docs
 

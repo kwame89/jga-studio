@@ -156,15 +156,44 @@ transitions.
 
 Column-level detail lives in [03 — Data model](03-data-model.md).
 
-## 8. Open questions
+## 8. Shipping & customs (resolved 2026-07-15)
+
+Buyer pays shipping; rates come from the `shipping_rates` config table
+(zone × size bucket), snapshotted onto the order as `shipping_cents`.
+
+| Size bucket | US | Canada | International |
+|---|---|---|---|
+| `print` (rolled, tube) | $15 | $30 | $50 |
+| `small` (original ≤ 24″ longest side) | $50 | $90 | $150 |
+| `medium` (original ≤ 40″) | $100 | $180 | $300 |
+| `large` (original > 40″) | $250 | **quote only** | **quote only** |
+
+- Rates are admin-editable defaults, benchmarked 2026-07 (couriers €80–400
+  typical for paintings; large canvases $500–2,500 — hence quote-only).
+- **Quote-only combinations block instant checkout**: the UI shows
+  "Contact the studio for shipping" and admin enters a manual order with a
+  bespoke shipping amount.
+- All shipments insured to sale price; originals require delivery signature.
+- **Incoterm: DDU/DAP** — import duties, VAT, and customs fees are the
+  collector's responsibility, stated at checkout and in the confirmation
+  email. Customs delays don't extend any deadline in this spec.
+- Treasury for crypto payments:
+  `0x30c92610f22203a728f4762e40d23a652feba946` (verified EIP-7702 smart
+  wallet on Base). It holds no ETH — automated *outbound* transfers
+  (future automated refunds) need gas funding or a paymaster first, which
+  is why beta 2 keeps crypto refunds admin-executed.
+
+## 9. Open questions
 
 - Crypto confirmation depth on Base: spec assumes **10 blocks (~20s)** — confirm.
-- Does the studio ship internationally in beta 2? Affects address validation
-  and whether shipping cost is a flat field or a rate table.
-- Sales tax / VAT handling — Stripe Tax, or out of scope for beta 2?
-- Treasury wallet: existing address, or provision a new CDP/Privy server
-  wallet? (Also gates automated crypto refunds later.)
+- Sales tax / VAT on the studio side (Stripe Tax?) — distinct from import
+  duties, which are the buyer's per §8.
+- Excluded destination countries list (sanctions/carrier coverage) — needs
+  a definitive enumeration before launch.
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Added §8 shipping & customs (tiered flat rates, DDU,
+  quote-only large intl); recorded treasury address; resolved shipping and
+  treasury open questions.
 - v0.1 (2026-07-15) — Initial draft from decisions locked with Jay.

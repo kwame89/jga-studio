@@ -4,11 +4,18 @@
 
 ## 1. What the token is
 
-An ERC-20 on **Base** (working name **$JGA** — final name/symbol open, §8).
+**`jga_studio`** — a deployed ERC-20 on **Base** at
+`0xcc3b754f6f3c508518ba7d0920f944d800c14b9a`
+(verified onchain 2026-07-15: 18 decimals, total supply **1,000,000,000**
+pre-minted, 59 holders at verification). The docs' shorthand "$JGA" refers
+to this token.
+
 Supabase is the ledger of record for *earned-but-unclaimed* balances
-(`reward_events`); the chain is the record of *claimed* tokens. Claiming
-mints (or transfers from a rewards treasury — §8) to the collector's
-**primary wallet** (02 §2).
+(`reward_events`); the chain is the record of *claimed* tokens. Because the
+supply is pre-minted, **claims are `transfer`s from a rewards wallet, not
+mints** — the rewards wallet must hold both a $JGA float and ETH for gas,
+and a low-balance alert (float < ~30 days of projected claims, or gas
+< 20 claims' worth) goes to the admin queue.
 
 All earn rates below are **config values, editable by admin**, with the
 launch defaults shown. Amounts stored as 18-decimal integers.
@@ -103,13 +110,17 @@ implying financial return.
 
 ## 8. Open questions
 
-- Token name/symbol, total supply model: **mint-on-claim vs pre-minted
-  treasury with transfers**. Recommendation: pre-minted fixed supply +
-  transfers (simpler audit story, no open minter role).
-- Has any token contract already been deployed? (Determines whether this
-  spec inherits constraints.)
 - Earn-rate review cadence — rates are config, but who signs off changes?
+- Which wallet serves as the **rewards wallet** (holds $JGA float + gas)?
+  It should be distinct from the commerce treasury
+  (`0x30c9…A946`), which is an EIP-7702 smart wallet currently holding no
+  ETH. How much of the 1B supply is allocated to the rewards float?
+
+*(Resolved 2026-07-15: contract exists — `jga_studio` at `0xcc3b…4b9a`,
+pre-minted 1B supply → claims are transfers, not mints. See §1.)*
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Token verified onchain (`jga_studio`, 1B pre-minted):
+  claims are transfers; rewards-wallet float/gas requirements added.
 - v0.1 (2026-07-15) — Initial draft.

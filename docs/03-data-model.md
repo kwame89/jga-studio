@@ -36,6 +36,7 @@ State columns are Postgres enums matching the names in these specs exactly.
 |---|---|---|
 | `title`, `description`, `medium`, `dimensions`, `year` | text/int | |
 | `kind` | enum(`original`, `edition`) | |
+| `size_bucket` | enum(`print`, `small`, `medium`, `large`) | Drives shipping rate lookup (01 §8) |
 | `status` | enum(`draft`, `available`, `held`, `on_auction`, `sold`, `archived`) | `held`/`sold` apply to originals; editions use counters |
 | `price_cents` | int | Buy-now price (null while auction-only) |
 | `edition_size` | int null | Editions only |
@@ -78,6 +79,12 @@ State columns are Postgres enums matching the names in these specs exactly.
 | `tx_hash` | text | Crypto; unique |
 | `failure_reason` | text | Reason code |
 | `refund_reference` | text | Stripe refund id or refund tx hash |
+
+### `shipping_rates` (admin-editable config)
+`zone` enum(`us`, `canada`, `international`) · `size_bucket` (same enum as
+`art_pieces`) · `amount_cents` int null — **null = quote only**, blocks
+instant checkout (01 §8). Unique (`zone`, `size_bucket`). Seeded with the
+01 §8 defaults.
 
 ### `webhook_events`
 `source` enum(`stripe`, `alchemy`) · `external_id` text · `payload` jsonb ·
@@ -186,11 +193,13 @@ erDiagram
 
 ## Open questions
 
-- Keep `shipping_cents` flat per order, or a rate table by region? (Depends
-  on international shipping answer, 01 §8.)
 - Retention for `webhook_events` payloads (contain addresses/emails) —
   propose 90 days then strip payload, keep ids.
 
+*(Resolved 2026-07-15: shipping is a `shipping_rates` zone × bucket table,
+snapshotted to `orders.shipping_cents` at order time.)*
+
 ## Changelog
 
+- v0.2 (2026-07-15) — Added `art_pieces.size_bucket` and `shipping_rates`.
 - v0.1 (2026-07-15) — Initial draft.

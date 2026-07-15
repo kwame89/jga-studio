@@ -91,8 +91,14 @@ bids only; see §8.
 1. At close with reserve met: top bid → `won`, others → `lost`; lot →
    `closed_pending_settlement`; an **order** is created for the winner
    (`source = auction`, `status = pending_payment`, total = hammer price +
-   shipping) with a **settlement checkout link** (Stripe or crypto — winner's
-   choice at payment time).
+   shipping + buyer's premium) with a **settlement checkout link** (Stripe
+   or crypto — winner's choice at payment time).
+   **Buyer's premium is 0% in beta 2** (`buyers_premium_bps = 0`, config):
+   major houses charge 26–28% as intermediaries, but an artist-direct
+   studio keeps the hammer price anyway — a premium would only obscure
+   pricing. The config knob exists so introducing one later (e.g. for
+   curated third-party sales) is a setting change with notice to bidders,
+   not a rebuild.
 2. `settlement_deadline = close + 48h`. Winner is notified immediately
    (email + in-app); reminder at 24h remaining.
 3. **Winner pays** → order `paid` (commerce machine, 01, takes over) → lot
@@ -139,8 +145,11 @@ Sketch to design against (full spec when the milestone starts):
 - Default settlement deadline: 48h assumed — confirm (art-world norm is
   24–72h).
 - Should the snipe window (10 min) differ for short (24h) lots?
-- Buyer's premium: none assumed in beta 2 — confirm.
+
+*(Resolved 2026-07-15: buyer's premium is 0% in beta 2, kept as config —
+see §6.)*
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Buyer's premium resolved: 0% in beta 2, kept as config.
 - v0.1 (2026-07-15) — Initial draft.

@@ -19,6 +19,20 @@ Exits: `pending_payment → cancelled` (hold expiry / user cancel);
   admin sends USDC, pastes tx hash. Refund voids the order's reward events.
 - Illegal transitions: reject + audit-log. Out-of-order webhooks: no-op, log.
 
+**Shipping** (buyer pays; `shipping_rates` config table, zone × size
+bucket, snapshotted to the order; null rate = quote-only → block instant
+checkout, show "Contact the studio"):
+
+| Bucket | US | Canada | Intl |
+|---|---|---|---|
+| `print` | $15 | $30 | $50 |
+| `small` ≤24″ | $50 | $90 | $150 |
+| `medium` ≤40″ | $100 | $180 | $300 |
+| `large` >40″ | $250 | quote | quote |
+
+Insured to sale price; signature for originals; **DDU** — import
+duties/taxes are the collector's, stated at checkout.
+
 ## Payment rails
 
 **Stripe:** `create-order` makes a Checkout Session (30-min expiry,
@@ -65,14 +79,15 @@ Immutable once live.
 lot `extended`. Unlimited extensions. Keep `original_ends_at`.
 
 **Settlement (beta 2 = checkout link):** close with reserve met → create
-order (`source=auction`, hammer + shipping), notify winner,
+order (`source=auction`, hammer + shipping; **buyer's premium = 0%**,
+config `buyers_premium_bps`), notify winner,
 `settlement_deadline = close + 48h`, reminder at 24h. Paid → lot `settled`;
 auction rewards written at payment, not hammer. Default → bid
 `cancelled_default`, strike (2 strikes → `bidding_suspended`); admin chooses:
 offer underbidder at their own last bid (new 48h order), relist, or pass.
 Escrow bidding is next milestone — do not build, leave the seam.
 
-## Rewards ($JGA, ERC-20 on Base — rates are admin config)
+## Rewards (`jga_studio` ERC-20 at `0xcc3b…4b9a` on Base — rates are admin config)
 
 | Earn | When written | Rate | Claimable |
 |---|---|---|---|
@@ -87,7 +102,8 @@ Event lifecycle: `pending → claimable → claimed`, or `→ voided`
 **Claim:** `request-claim` guards: primary wallet verified; balance ≥ 100
 $JGA; no open claim. Atomically sweep claimable events → `reward_claims`
 (`pending`, unique `idempotency_key`, wallet snapshot). Worker submits
-mint/transfer from the rewards server wallet (studio pays gas) →
+ERC-20 **transfer** (supply is pre-minted — never mint) from the rewards
+wallet, which holds the $JGA float + ETH gas (studio pays gas) →
 `submitted(tx_hash)` → 10 confs → `confirmed`.
 
 **Failure:** backoff retries 1/5/25 min; before any resubmit, check receipt

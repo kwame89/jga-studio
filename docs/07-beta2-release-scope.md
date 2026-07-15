@@ -62,7 +62,11 @@ manual behind the scenes — never silently broken.
 - Additional token utilities beyond priority access (no discounts, no
   gated content yet)
 - Guest checkout
-- Sales tax automation (manual handling; revisit before scaling)
+- Instant international checkout for **large originals** (quote-only:
+  "Contact the studio" + admin manual order, per commerce spec §8)
+- Buyer's premium (config exists at 0%; enabling it is a future decision)
+- Sales tax automation (manual handling; revisit before scaling — import
+  duties are already the buyer's responsibility, DDU)
 - In-app push / SMS notifications (email only)
 - Multi-artist support — JGA Studio is single-artist by design in beta 2
 
@@ -82,4 +86,6 @@ manual behind the scenes — never silently broken.
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Out-of-scope additions: intl instant checkout for
+  large originals (quote-only), buyer's premium (config at 0%).
 - v0.1 (2026-07-15) — Initial draft.
