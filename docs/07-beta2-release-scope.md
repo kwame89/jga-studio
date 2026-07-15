@@ -43,6 +43,12 @@ manual behind the scenes — never silently broken.
   settlement reminder, claim confirmed) driven by the outbox, respecting
   `notification_preferences`
 
+**Archive Atlas integration (spec 09)**
+- `atlas-import` Edge Function: HMAC-authenticated, idempotent upsert on
+  `atlas_artwork_id`, image copy with quality gate, lock-aware updates
+- Atlas-side "Push to JGA Studio" action (lives in the Atlas repo)
+- "View provenance record" link on piece detail pages
+
 **App experience (beta 1 feedback — spec 08)**
 - Home/Discover IA split: narrative homepage (statement, bio, series),
   full commerce grid on Discover
@@ -86,7 +92,10 @@ manual behind the scenes — never silently broken.
 - In-app push / SMS notifications (email only)
 - Multi-artist support — JGA Studio is single-artist by design in beta 2
 - Three-token ecosystem (JGAS artwork/provenance layer, XRPL) and the
-  Digital Artwork Passport — recorded as future direction in 08 §8
+  Digital Artwork Passport — recorded as future direction in 08 §8;
+  registry role now filled by Archive Atlas (spec 09)
+- Automated sale writeback JGA → Atlas ownership_transfer events (09 §6;
+  Jay logs sales in Atlas manually in beta 2)
 
 ## 4. Exit criteria (definition of done)
 
@@ -107,6 +116,8 @@ manual behind the scenes — never silently broken.
 
 ## Changelog
 
+- v0.5 (2026-07-15) — Archive Atlas integration scoped in (import,
+  provenance links); sale writeback deferred.
 - v0.4 (2026-07-15) — NJ sales tax rule and embargo exclusion list added.
 - v0.3 (2026-07-15) — Beta 1 feedback folded in (spec 08): app-experience
   section added to scope, video media placeholder, token-ecosystem/passport

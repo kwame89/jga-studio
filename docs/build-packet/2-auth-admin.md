@@ -40,6 +40,9 @@ own `notification_preferences` row via RLS.
 Collector: `sync-user` · `create-order` · `submit-crypto-payment` ·
 `cancel-order` · `place-bid` · `request-claim`
 Webhooks: `stripe-webhook` · `chain-webhook`
+Service-to-service: `atlas-import` (HMAC shared secret; idempotent upsert
+of artwork identity from Archive Atlas; never touches price/status/locks;
+only accepts `root_artist_id = atlas_root_artist_id` config)
 Cron: `confirm-crypto-payments` · `expire-holds` · `close-auctions` ·
 `settlement-deadlines` · `process-claims` · `complete-orders`
 Admin: `admin-artwork` (CRUD) · `admin-upload-image` · `admin-set-availability`

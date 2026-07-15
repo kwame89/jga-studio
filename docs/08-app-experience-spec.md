@@ -103,7 +103,9 @@ doesn't paint us into a corner, but none of it ships now:
 - **Three-token separation:** `jaygoldingart89` (artist identity, Zora),
   `jga_studio` (studio identity), and a possible **JGAS**
   artwork/provenance layer (possibly XRPL) for COAs, registry, and
-  ownership records.
+  ownership records. *Update 2026-07-15: the registry-layer role is
+  materially filled by **Archive Atlas** on Stellar (spec 09) — a
+  separate JGAS token remains hypothetical.*
   ⚠ **Tension to resolve before that migration:** beta 2 already uses
   `jga_studio` as the purchase-rewards token (06, funded wallet) — under
   the three-layer model, purchase rewards would arguably belong to the
@@ -112,8 +114,9 @@ doesn't paint us into a corner, but none of it ships now:
   make an accounting migration possible either way.
 - **Digital Artwork Passport:** per-work record of image, title, medium,
   dimensions, date, exhibition history, ownership history, certificate
-  status. The current `art_pieces` + `orders` tables already capture most
-  fields; exhibition history would be the only new table.
+  status. *Update 2026-07-15: this substantially exists as Archive
+  Atlas's public per-piece provenance page, linked from JGA piece detail
+  via `provenance_url` (spec 09 §4) — no new JGA tables needed.*
 
 ## 9. Open questions
 
@@ -124,5 +127,7 @@ doesn't paint us into a corner, but none of it ships now:
 
 ## Changelog
 
+- v0.2 (2026-07-15) — §8 updated: Archive Atlas fills the registry-layer
+  and Artwork Passport roles (spec 09).
 - v0.1 (2026-07-15) — Initial draft from Malcolm's and Jordan's beta
   feedback; ChatGPT ecosystem notes recorded as future direction only.

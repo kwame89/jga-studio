@@ -59,6 +59,9 @@ create table art_pieces (
   size_bucket size_bucket not null default 'small',   -- drives shipping rates
   series text,                                        -- Home narrative grouping
   tags text[] not null default '{}',                  -- curated filter chips (GIN index)
+  atlas_artwork_id uuid unique,                       -- Archive Atlas upsert key
+  atlas_synced_at timestamptz,
+  provenance_url text,                                -- public Atlas provenance page
   status art_status not null default 'draft',
   price_cents int,
   edition_size int, editions_sold int not null default 0,

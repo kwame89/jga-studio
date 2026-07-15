@@ -87,6 +87,7 @@ that RLS cannot express. One write path = one place invariants live.
 | `request-claim` | Collector | Reward claim (06 §5) |
 | `stripe-webhook` | Stripe | 01 §6 |
 | `chain-webhook` | Alchemy | 01 §6 |
+| `atlas-import` | Archive Atlas (HMAC shared secret, not a user token) | 09 §2 |
 | `confirm-crypto-payments`, `expire-holds`, `close-auctions`, `process-claims`, `complete-orders`, `settlement-deadlines` | Cron | Scheduled workers |
 | `admin-*` (artwork, images, availability, lots, orders, rewards, roles, notifications) | Admin | 04 |
 
@@ -108,4 +109,6 @@ that RLS cannot express. One write path = one place invariants live.
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Added `atlas-import` (HMAC service auth) to the
+  function inventory.
 - v0.1 (2026-07-15) — Initial draft.

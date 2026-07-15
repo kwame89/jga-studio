@@ -12,6 +12,10 @@ packet and the full specs disagree, the full specs win.
 | [4-beta-checklist.md](4-beta-checklist.md) | Scope + exit criteria as checkboxes | 07 |
 | [5-ux.md](5-ux.md) | IA, theme, search, media, auction voice (beta feedback) | 08 |
 
+Artwork identity (title, medium, images, tags…) is authored in **Archive
+Atlas** (github.com/kwame89/archive-atlas) and pushed in via
+`atlas-import` — see full spec 09. Commerce fields stay JGA-owned.
+
 **Stack:** Privy (auth/wallets) · Supabase (Postgres, Edge Functions,
 Storage — source of truth) · Stripe Checkout · USDC on Base · $JGA ERC-20
 on Base.

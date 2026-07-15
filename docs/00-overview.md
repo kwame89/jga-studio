@@ -19,6 +19,7 @@ spec gets a changelog entry.
 | 06 | [Rewards](06-rewards.md) | Earning, claimability, token utility, claim failure/retry |
 | 07 | [Beta 2 release scope](07-beta2-release-scope.md) | In / placeholder / out |
 | 08 | [App experience spec](08-app-experience-spec.md) | Beta 1 feedback: IA, theme, search/filters, media quality, auction voice, known bugs |
+| 09 | [Archive Atlas integration](09-archive-atlas-integration.md) | Atlas as artwork/provenance system of record; one-way push into JGA Studio |
 
 ## Locked architectural decisions (2026-07-15)
 
@@ -64,6 +65,11 @@ spec gets a changelog entry.
     import duties/taxes are the collector's responsibility (industry norm,
     cf. Saatchi Art). Large originals ship internationally **by quote only**
     in beta 2.
+13. **Archive Atlas** (github.com/kwame89/archive-atlas) is the system of
+    record for artwork identity and provenance; JGA Studio is the system
+    of record for commerce. One-way push Atlas → Studio via the
+    `atlas-import` Edge Function; commerce fields are never synced; sale
+    writeback to Atlas is manual in beta 2 (see 09).
 
 ## Conventions used across all docs
 
