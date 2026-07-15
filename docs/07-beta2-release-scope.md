@@ -77,8 +77,12 @@ manual behind the scenes — never silently broken.
 - Instant international checkout for **large originals** (quote-only:
   "Contact the studio" + admin manual order, per commerce spec §8)
 - Buyer's premium (config exists at 0%; enabling it is a future decision)
-- Sales tax automation (manual handling; revisit before scaling — import
-  duties are already the buyer's responsibility, DDU)
+- Multi-state sales tax automation (Stripe Tax) — beta 2 collects **NJ
+  6.625% on NJ-destined orders only** (commerce spec §8); import duties
+  are already the buyer's responsibility (DDU)
+- Shipping to US-embargoed/export-banned destinations (Cuba, Iran, North
+  Korea, Syria, Russia, Belarus, Crimea/Donetsk/Luhansk) — excluded via
+  config, country picker omits them
 - In-app push / SMS notifications (email only)
 - Multi-artist support — JGA Studio is single-artist by design in beta 2
 - Three-token ecosystem (JGAS artwork/provenance layer, XRPL) and the
@@ -103,6 +107,7 @@ manual behind the scenes — never silently broken.
 
 ## Changelog
 
+- v0.4 (2026-07-15) — NJ sales tax rule and embargo exclusion list added.
 - v0.3 (2026-07-15) — Beta 1 feedback folded in (spec 08): app-experience
   section added to scope, video media placeholder, token-ecosystem/passport
   out-of-scope, exit criterion 6.

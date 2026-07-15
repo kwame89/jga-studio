@@ -177,6 +177,32 @@ Buyer pays shipping; rates come from the `shipping_rates` config table
 - **Incoterm: DDU/DAP** — import duties, VAT, and customs fees are the
   collector's responsibility, stated at checkout and in the confirmation
   email. Customs delays don't extend any deadline in this spec.
+- **Excluded destinations** (resolved 2026-07-15): no orders ship to
+  destinations under US comprehensive embargoes or artwork/luxury-goods
+  export bans. Initial list: **Cuba, Iran, North Korea, Syria, Russia,
+  Belarus**, and the **Crimea, Donetsk, and Luhansk regions of Ukraine**.
+  (Cuba/Iran/North Korea are comprehensively embargoed; Syria's
+  comprehensive sanctions lifted mid-2025 but residual restrictions and
+  carrier coverage keep it excluded for now; Russia/Belarus fall under US
+  luxury-goods export bans that cover artwork.) The list lives in admin
+  config, is enforced at address entry (country picker simply omits them),
+  and gets reviewed when sanctions change — not hardcoded.
+
+### Sales tax (resolved 2026-07-15)
+
+- **NJ-destined orders**: New Jersey sales tax at **6.625%** (flat
+  statewide, no local add-ons) applies to **subtotal + shipping** — NJ
+  taxes delivery charges whenever the item is taxable, and artwork is
+  taxable tangible personal property. Stored as config
+  (`sales_tax: { state: "NJ", rate: 0.06625 }`), snapshotted to
+  `orders.tax_cents`; `total_cents = subtotal + shipping + tax`.
+- **All other US states**: no collection in beta 2 (single-state nexus).
+  Revisit if economic-nexus thresholds are approached elsewhere;
+  Stripe Tax is the likely automation path then.
+- **International**: no US sales tax; import charges are the buyer's (DDU
+  above).
+- *Not tax advice — have the studio's accountant confirm the treatment,
+  particularly shipping taxability and any resale/exemption cases.*
 - Treasury for crypto payments:
   `0x30c92610f22203a728f4762e40d23a652feba946` (verified EIP-7702 smart
   wallet on Base, funded with ETH for gas — verified 2026-07-15). Crypto
@@ -188,13 +214,15 @@ Buyer pays shipping; rates come from the `shipping_rates` config table
 ## 9. Open questions
 
 - Crypto confirmation depth on Base: spec assumes **10 blocks (~20s)** — confirm.
-- Sales tax / VAT on the studio side (Stripe Tax?) — distinct from import
-  duties, which are the buyer's per §8.
-- Excluded destination countries list (sanctions/carrier coverage) — needs
-  a definitive enumeration before launch.
+
+*(Resolved 2026-07-15: sales tax = NJ 6.625% on subtotal + shipping for
+NJ-destined orders only; excluded destinations enumerated in §8.)*
 
 ## Changelog
 
+- v0.4 (2026-07-15) — Resolved: excluded destinations (US embargo/export-ban
+  list) and sales tax (NJ 6.625% on subtotal + shipping, NJ destinations
+  only; `tax_cents` added to order totals).
 - v0.3 (2026-07-15) — Treasury ETH funding verified; admin-executed crypto
   refunds reframed as a key-custody decision.
 - v0.2 (2026-07-15) — Added §8 shipping & customs (tiered flat rates, DDU,

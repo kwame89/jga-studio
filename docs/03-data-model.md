@@ -67,7 +67,7 @@ config values mapped from `price_cents` at query time — no column.
 | `auction_lot_id` | fk null | Set when `source = auction` |
 | `status` | enum per 01 §2 | `pending_payment` … `refunded` |
 | `rail` | enum(`stripe`, `crypto`) | |
-| `subtotal_cents`, `shipping_cents`, `total_cents` | int | Snapshot at order time |
+| `subtotal_cents`, `shipping_cents`, `tax_cents`, `total_cents` | int | Snapshot at order time; tax per 01 §8 (NJ 6.625% on subtotal + shipping, NJ destinations only); `total = subtotal + shipping + tax` |
 | `shipping_address` | jsonb | Snapshot — never a live fk |
 | `hold_expires_at` | timestamptz | 01 §4 |
 | `tracking_number`, `shipped_at`, `delivered_at` | | |
@@ -208,6 +208,7 @@ snapshotted to `orders.shipping_cents` at order time.)*
 
 ## Changelog
 
+- v0.4 (2026-07-15) — `orders.tax_cents` added (NJ sales tax snapshot).
 - v0.3 (2026-07-15) — Beta feedback: `art_pieces.tags` + `series`,
   `art_images.media_kind`; price tiers noted as config, not a column.
 - v0.2 (2026-07-15) — Added `art_pieces.size_bucket` and `shipping_rates`.

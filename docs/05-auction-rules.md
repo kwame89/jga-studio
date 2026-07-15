@@ -142,14 +142,13 @@ Sketch to design against (full spec when the milestone starts):
 
 ## 9. Open questions
 
-- Default settlement deadline: 48h assumed — confirm (art-world norm is
-  24–72h).
 - Should the snipe window (10 min) differ for short (24h) lots?
 
 *(Resolved 2026-07-15: buyer's premium is 0% in beta 2, kept as config —
-see §6.)*
+see §6. Settlement deadline confirmed by Jay at 48h.)*
 
 ## Changelog
 
+- v0.3 (2026-07-15) — Settlement deadline confirmed at 48h.
 - v0.2 (2026-07-15) — Buyer's premium resolved: 0% in beta 2, kept as config.
 - v0.1 (2026-07-15) — Initial draft.

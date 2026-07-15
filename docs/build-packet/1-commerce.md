@@ -33,6 +33,15 @@ checkout, show "Contact the studio"):
 Insured to sale price; signature for originals; **DDU** — import
 duties/taxes are the collector's, stated at checkout.
 
+**Excluded destinations** (config; country picker omits them): Cuba, Iran,
+North Korea, Syria, Russia, Belarus, Crimea/Donetsk/Luhansk — US
+embargoes / artwork export bans.
+
+**Sales tax:** NJ-destined orders only: **6.625% on subtotal + shipping**
+(NJ taxes delivery for taxable goods; artwork is taxable). Config value;
+snapshot to `orders.tax_cents`; `total = subtotal + shipping + tax`. No
+collection for other states in beta 2.
+
 ## Payment rails
 
 **Stripe:** `create-order` makes a Checkout Session (30-min expiry,

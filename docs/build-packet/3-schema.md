@@ -91,7 +91,8 @@ create table orders (
   status order_status not null default 'pending_payment',
   rail pay_rail not null,
   subtotal_cents int not null, shipping_cents int not null default 0,
-  total_cents int not null,
+  tax_cents int not null default 0,      -- NJ 6.625% on subtotal+shipping, NJ dest only
+  total_cents int not null,              -- subtotal + shipping + tax
   shipping_address jsonb not null,        -- snapshot, never a live fk
   hold_expires_at timestamptz,
   tracking_number text, shipped_at timestamptz, delivered_at timestamptz,
