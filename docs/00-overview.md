@@ -18,6 +18,7 @@ spec gets a changelog entry.
 | 05 | [Auction rules](05-auction-rules.md) | Increments, reserve, anti-snipe, settlement, beta limits |
 | 06 | [Rewards](06-rewards.md) | Earning, claimability, token utility, claim failure/retry |
 | 07 | [Beta 2 release scope](07-beta2-release-scope.md) | In / placeholder / out |
+| 08 | [App experience spec](08-app-experience-spec.md) | Beta 1 feedback: IA, theme, search/filters, media quality, auction voice, known bugs |
 
 ## Locked architectural decisions (2026-07-15)
 

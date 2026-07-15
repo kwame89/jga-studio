@@ -8,7 +8,9 @@ Every workflow here = admin UI → `admin-*` Edge Function → role check (02 §
 ## 1. Create / edit artwork
 
 - **Create** starts as `status = draft`: title, description, medium,
-  dimensions, year, `kind` (original | edition), `edition_size` (editions).
+  dimensions, year, `kind` (original | edition), `edition_size` (editions),
+  `series`, and `tags` (chosen from the curated tag list — 08 §4; tags and
+  series stay editable after publish).
 - **Edit** is unrestricted while `draft`. Once published:
   - Text fields: editable anytime (typo fixes).
   - `price_cents`: editable while `available`; **locked** while `held`,
@@ -29,9 +31,10 @@ Every workflow here = admin UI → `admin-*` Edge Function → role check (02 §
 - On completion the function writes `art_images` (sort_order appended,
   first image auto-`is_primary`, `alt_text` required — accessibility is not
   optional for an art site).
-- Constraints: JPEG/PNG/WebP, ≤ 25 MB. Derivatives (thumb/display sizes) are
-  produced by Supabase image transforms at request time — no separate
-  pipeline in beta 2.
+- Constraints: JPEG/PNG/WebP, ≤ 25 MB. **Quality gate (beta feedback,
+  08 §5): reject uploads under 2000 px on the long edge; warn under
+  2400 px.** Derivatives (thumb/display sizes) are produced by Supabase
+  image transforms at request time — no separate pipeline in beta 2.
 - Reorder and set-primary are batch operations in one function call.
 - Deleting an image removes the row and the storage object; the last image
   of a **published** piece cannot be deleted.
@@ -100,4 +103,6 @@ a link to the owning order/lot.
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Beta feedback: image quality gate (≥2000 px),
+  tags/series on artwork create-edit.
 - v0.1 (2026-07-15) — Initial draft.

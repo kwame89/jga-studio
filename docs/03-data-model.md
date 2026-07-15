@@ -37,6 +37,8 @@ State columns are Postgres enums matching the names in these specs exactly.
 | `title`, `description`, `medium`, `dimensions`, `year` | text/int | |
 | `kind` | enum(`original`, `edition`) | |
 | `size_bucket` | enum(`print`, `small`, `medium`, `large`) | Drives shipping rate lookup (01 §8) |
+| `tags` | text[] default '{}' | Curated filter chips for Discover (08 §4); GIN index |
+| `series` | text null | Series name for Home narrative grouping (08 §1) |
 | `status` | enum(`draft`, `available`, `held`, `on_auction`, `sold`, `archived`) | `held`/`sold` apply to originals; editions use counters |
 | `price_cents` | int | Buy-now price (null while auction-only) |
 | `edition_size` | int null | Editions only |
@@ -46,7 +48,12 @@ State columns are Postgres enums matching the names in these specs exactly.
 
 ### `art_images`
 `art_piece_id` fk · `storage_path` text (Supabase Storage, 04 §3) ·
-`sort_order` int · `is_primary` bool · `alt_text` text.
+`sort_order` int · `is_primary` bool · `alt_text` text ·
+`media_kind` enum(`image`, `video`) default `image` (video display is a
+stretch goal, 07; schema is ready so uploads don't need a migration).
+
+Price-tier filter bands (affordable/expensive/luxurious, 08 §4) are
+config values mapped from `price_cents` at query time — no column.
 
 ## Commerce
 
@@ -201,5 +208,7 @@ snapshotted to `orders.shipping_cents` at order time.)*
 
 ## Changelog
 
+- v0.3 (2026-07-15) — Beta feedback: `art_pieces.tags` + `series`,
+  `art_images.media_kind`; price tiers noted as config, not a column.
 - v0.2 (2026-07-15) — Added `art_pieces.size_bucket` and `shipping_rates`.
 - v0.1 (2026-07-15) — Initial draft.

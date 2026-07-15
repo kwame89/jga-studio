@@ -43,6 +43,17 @@ manual behind the scenes — never silently broken.
   settlement reminder, claim confirmed) driven by the outbox, respecting
   `notification_preferences`
 
+**App experience (beta 1 feedback — spec 08)**
+- Home/Discover IA split: narrative homepage (statement, bio, series),
+  full commerce grid on Discover
+- Dark theme (black + purple) as default, light theme toggle
+- Bug fixes: featured-release carousel swipe; search × price-filter break
+- Apply-model search with result count, tag chips, and price-tier chips
+  (affordable / expensive / luxurious config bands)
+- Per-piece swipeable gallery with pinch-to-zoom
+- Image upload quality gate (≥2000 px long edge)
+- Human-voice auction copy with plain-language bidding explainer
+
 ## 2. Placeholder in beta 2
 
 | Feature | What ships instead | Real version |
@@ -51,6 +62,7 @@ manual behind the scenes — never silently broken.
 | **Shipping / carrier integration** | Admin marks shipped/delivered by hand; tracking number is a pasted string, link rendered best-effort | Carrier API + auto-delivery detection later |
 | **Automated crypto refunds** | Admin sends the USDC refund and pastes the tx hash | Automated once treasury moves to a server wallet |
 | **Delivery confirmation** | Manual `mark-delivered`; auto-complete after 30 days regardless | Comes free with carrier integration |
+| **Video media on pieces** | `media_kind` column exists; upload/display deferred — detail photos cover mixed-media zoom for now | Next milestone with gallery v2 |
 
 ## 3. Explicitly out of scope for beta 2
 
@@ -69,6 +81,8 @@ manual behind the scenes — never silently broken.
   duties are already the buyer's responsibility, DDU)
 - In-app push / SMS notifications (email only)
 - Multi-artist support — JGA Studio is single-artist by design in beta 2
+- Three-token ecosystem (JGAS artwork/provenance layer, XRPL) and the
+  Digital Artwork Passport — recorded as future direction in 08 §8
 
 ## 4. Exit criteria (definition of done)
 
@@ -83,9 +97,15 @@ manual behind the scenes — never silently broken.
 4. Every admin mutation appears in `admin_audit_log`; a non-admin calling
    any `admin-*` function gets 403 and a denied log row.
 5. Replayed Stripe/Alchemy webhooks (same event id) are no-ops.
+6. Beta-feedback fixes verified: featured carousel swipes; a typed search
+   term combined with the price filter returns correct results with a
+   visible count; dark theme is the default first-run experience.
 
 ## Changelog
 
+- v0.3 (2026-07-15) — Beta 1 feedback folded in (spec 08): app-experience
+  section added to scope, video media placeholder, token-ecosystem/passport
+  out-of-scope, exit criterion 6.
 - v0.2 (2026-07-15) — Out-of-scope additions: intl instant checkout for
   large originals (quote-only), buyer's premium (config at 0%).
 - v0.1 (2026-07-15) — Initial draft.

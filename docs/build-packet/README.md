@@ -10,6 +10,7 @@ packet and the full specs disagree, the full specs win.
 | [2-auth-admin.md](2-auth-admin.md) | Identity, permissions, Edge Functions, admin rules | 02, 04 |
 | [3-schema.md](3-schema.md) | Runnable Postgres DDL + RLS posture | 03 |
 | [4-beta-checklist.md](4-beta-checklist.md) | Scope + exit criteria as checkboxes | 07 |
+| [5-ux.md](5-ux.md) | IA, theme, search, media, auction voice (beta feedback) | 08 |
 
 **Stack:** Privy (auth/wallets) · Supabase (Postgres, Edge Functions,
 Storage — source of truth) · Stripe Checkout · USDC on Base · $JGA ERC-20

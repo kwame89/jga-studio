@@ -52,6 +52,16 @@ inert or manual — never silently broken.
 **Notifications**
 - [ ] Email outbox worker respecting preferences (order confirmed/shipped, outbid, won, settlement reminder, claim confirmed, broadcast)
 
+**App experience (beta feedback — see 5-ux.md)**
+- [ ] Home/Discover IA split (narrative home; commerce grid on Discover)
+- [ ] Dark theme (black + purple) default + light toggle, AA contrast
+- [ ] Fix: featured-release carousel swipes
+- [ ] Fix: search term + price filter combination (apply-model with result count + reset)
+- [ ] Tag / series / price-tier filter chips (tier bands in config)
+- [ ] Swipeable pinch-zoom gallery on piece detail
+- [ ] Image upload quality gate (≥2000 px long edge)
+- [ ] Human-voice auction copy + plain-language bidding explainer (Jay approves)
+
 ## Placeholder — ship the stub, not the feature
 
 - [ ] Escrow bidding: "instant-settle bidding coming soon" copy only; leave the settlement seam

@@ -57,6 +57,8 @@ create table art_pieces (
   title text not null, description text, medium text, dimensions text, year int,
   kind art_kind not null,
   size_bucket size_bucket not null default 'small',   -- drives shipping rates
+  series text,                                        -- Home narrative grouping
+  tags text[] not null default '{}',                  -- curated filter chips (GIN index)
   status art_status not null default 'draft',
   price_cents int,
   edition_size int, editions_sold int not null default 0,
@@ -67,13 +69,17 @@ create table art_pieces (
          or kind = 'original')
 );
 
+create type media_kind as enum ('image','video');  -- video display deferred
+
 create table art_images (
   art_piece_id uuid not null references art_pieces(id),
   storage_path text not null,
+  media_kind media_kind not null default 'image',
   sort_order int not null default 0,
   is_primary boolean not null default false,
   alt_text text not null
 );
+create index art_pieces_tags on art_pieces using gin (tags);
 
 -- commerce
 create table orders (
