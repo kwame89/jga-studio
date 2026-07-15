@@ -47,8 +47,9 @@ spec gets a changelog entry.
     1,000,000,000 pre-minted supply. Claims are **transfers from a rewards
     wallet**, not mints. Commerce treasury:
     `0x30c92610f22203a728f4762e40d23a652feba946` (verified EIP-7702 smart
-    wallet; holds zero ETH, so outbound transfers need gas funding or a
-    paymaster). Rewards wallet:
+    wallet, funded with ETH for gas 2026-07-15; crypto refunds nonetheless
+    stay admin-executed in beta 2 as a key-custody choice — the treasury's
+    signing key never lives in a server process). Rewards wallet:
     `0xf840b0b61db60daa04a4038f69e9d4b39a31a7af` (also a verified EIP-7702
     smart wallet) — holds a starting float of **8,000,000 $JGA** (0.8% of
     supply, to grow over time) plus ETH for gas, both verified onchain

@@ -19,8 +19,9 @@ on Base.
 - Reward token `jga_studio`: `0xcc3b754f6f3c508518ba7d0920f944d800c14b9a`
   (18 decimals, 1B pre-minted → claims are transfers, never mints)
 - Commerce treasury (USDC receive):
-  `0x30c92610f22203a728f4762e40d23a652feba946` (EIP-7702 smart wallet;
-  holds no ETH — do not build automated outbound transfers from it)
+  `0x30c92610f22203a728f4762e40d23a652feba946` (EIP-7702 smart wallet,
+  holds ETH for gas; still do NOT build automated outbound transfers from
+  it — key-custody decision, refunds are admin-executed in beta 2)
 - Rewards wallet (sends $JGA claims):
   `0xf840b0b61db60daa04a4038f69e9d4b39a31a7af` (EIP-7702 smart wallet;
   funded 2026-07-15 with the 8,000,000 $JGA starting float + ETH gas;

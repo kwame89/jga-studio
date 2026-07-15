@@ -179,9 +179,11 @@ Buyer pays shipping; rates come from the `shipping_rates` config table
   email. Customs delays don't extend any deadline in this spec.
 - Treasury for crypto payments:
   `0x30c92610f22203a728f4762e40d23a652feba946` (verified EIP-7702 smart
-  wallet on Base). It holds no ETH — automated *outbound* transfers
-  (future automated refunds) need gas funding or a paymaster first, which
-  is why beta 2 keeps crypto refunds admin-executed.
+  wallet on Base, funded with ETH for gas — verified 2026-07-15). Crypto
+  refunds are still **admin-executed in beta 2**: this is a key-custody
+  decision, not a gas one — automating refunds would put the treasury's
+  signing key in a server process, which stays out of scope until a proper
+  server-wallet/KMS setup exists.
 
 ## 9. Open questions
 
@@ -193,6 +195,8 @@ Buyer pays shipping; rates come from the `shipping_rates` config table
 
 ## Changelog
 
+- v0.3 (2026-07-15) — Treasury ETH funding verified; admin-executed crypto
+  refunds reframed as a key-custody decision.
 - v0.2 (2026-07-15) — Added §8 shipping & customs (tiered flat rates, DDU,
   quote-only large intl); recorded treasury address; resolved shipping and
   treasury open questions.
