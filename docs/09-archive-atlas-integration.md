@@ -135,6 +135,10 @@ kept pointed at the primary image copy so the current app renders it;
 
 ## Changelog
 
+- v0.3 (2026-07-15) — **Deployed to both projects and verified live**:
+  migration applied, all five secrets set, unsigned requests 401, signed
+  request with a foreign root artist correctly rejected + audit-logged.
+  Atlas public origin: `https://beta.archiveatlas.art`.
 - v0.2 (2026-07-15) — Both sides implemented (§8): `atlas-import` +
   migration in this repo, `push-to-jga` + artwork-page button in the
   archive-atlas repo. Deployment runbook added.

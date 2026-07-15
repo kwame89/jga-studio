@@ -55,8 +55,8 @@ inert or manual — never silently broken.
 - [ ] Email outbox worker respecting preferences (order confirmed/shipped, outbid, won, settlement reminder, claim confirmed, broadcast)
 
 **Archive Atlas integration (spec 09)**
-- [ ] `atlas-import` Edge Function: HMAC auth, idempotent upsert on `atlas_artwork_id`, image copy + ≥2000px gate, lock-aware, per-item batch results, audit-logged
-- [ ] "Push to JGA Studio" action in the Atlas repo
+- [x] `atlas-import` Edge Function: HMAC auth, idempotent upsert on `atlas_artwork_id`, image copy + ≥2000px gate, lock-aware, per-item batch results, audit-logged — **deployed + auth path verified live 2026-07-15**
+- [x] "Push to JGA Studio" action in the Atlas repo — deployed (fn + artwork-page button)
 - [ ] "View provenance record" link on piece detail (conservative copy — no "verified authentic")
 
 **App experience (beta feedback — see 5-ux.md)**
