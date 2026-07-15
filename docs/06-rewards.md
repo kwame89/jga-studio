@@ -24,13 +24,13 @@ claims, or gas below ~20 claims' worth) goes to the admin queue, and
 (collector sees "claims temporarily paused") rather than letting the worker
 fail onchain.
 
-**Launch prerequisites (unfunded as of 2026-07-15 — wallet holds no tokens
-and no ETH):**
-1. Transfer the 8,000,000 $JGA float from the deployer/holder to the
-   rewards wallet.
-2. Give it gas: either fund with ETH, or run the claim worker through a
-   paymaster/bundler (it's a smart wallet, so sponsored userOps are an
-   option — decide before building `process-claims`).
+**Funding status (verified onchain 2026-07-15):** the wallet holds the
+8,000,000 $JGA float (received in tx
+`0xb7cd9911bf1c7dc94e901720f4fc547cb746ab72c3c503595802a9a618661345`) and
+~0.0093 ETH for gas. **Gas strategy: plain ETH funding** — an ERC-20
+transfer on Base costs a fraction of a cent, so this covers thousands of
+claims; the low-balance alert above triggers a top-up. A paymaster remains
+an option later but is not part of beta 2.
 
 All earn rates below are **config values, editable by admin**, with the
 launch defaults shown. Amounts stored as 18-decimal integers.
@@ -126,16 +126,16 @@ implying financial return.
 ## 8. Open questions
 
 - Earn-rate review cadence — rates are config, but who signs off changes?
-- Gas strategy for the rewards wallet: plain ETH funding vs
-  paymaster-sponsored userOps (§1 launch prerequisites) — decide before
-  building `process-claims`.
 
 *(Resolved 2026-07-15: contract exists — `jga_studio` at `0xcc3b…4b9a`,
 pre-minted 1B supply → claims are transfers, not mints. Rewards wallet is
-`0xf840…a7af` with an 8M $JGA starting float. See §1.)*
+`0xf840…a7af`, funded with the 8M $JGA float + ETH gas; gas strategy is
+plain ETH. See §1.)*
 
 ## Changelog
 
+- v0.4 (2026-07-15) — Rewards wallet funding verified onchain (8M $JGA +
+  ETH gas); gas strategy resolved to plain ETH.
 - v0.3 (2026-07-15) — Rewards wallet recorded (`0xf840…a7af`, 8M $JGA
   starting float); launch funding prerequisites and float-cap claim guard
   added.

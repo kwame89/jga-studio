@@ -50,9 +50,9 @@ spec gets a changelog entry.
     wallet; holds zero ETH, so outbound transfers need gas funding or a
     paymaster). Rewards wallet:
     `0xf840b0b61db60daa04a4038f69e9d4b39a31a7af` (also a verified EIP-7702
-    smart wallet) — allocated a starting float of **8,000,000 $JGA** (0.8%
-    of supply, to grow over time). As of 2026-07-15 it holds no tokens and
-    no ETH yet — funding it is a launch prerequisite (06 §5).
+    smart wallet) — holds a starting float of **8,000,000 $JGA** (0.8% of
+    supply, to grow over time) plus ETH for gas, both verified onchain
+    2026-07-15. Gas strategy: plain ETH funding (no paymaster in beta 2).
 11. **Buyer's premium: 0% in beta 2.** Major houses charge 26–28% as
     intermediaries; an artist-direct studio gains nothing but opacity from
     one. Config value `buyers_premium_bps = 0` so it's a setting, not a

@@ -23,8 +23,8 @@ on Base.
   holds no ETH — do not build automated outbound transfers from it)
 - Rewards wallet (sends $JGA claims):
   `0xf840b0b61db60daa04a4038f69e9d4b39a31a7af` (EIP-7702 smart wallet;
-  starting float 8,000,000 $JGA — unfunded at spec time, must hold float +
-  gas before first claim; claims pause when a claim would exceed the float)
+  funded 2026-07-15 with the 8,000,000 $JGA starting float + ETH gas;
+  claims pause when a claim would exceed the float)
 
 **Golden rules (never violate):**
 1. All writes via Edge Functions with service role — except a collector's
