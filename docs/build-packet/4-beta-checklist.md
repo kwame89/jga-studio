@@ -36,6 +36,7 @@ inert or manual — never silently broken.
 - [ ] `request-claim` (primary wallet, ≥100 $JGA min, one open claim) + sweep
 - [ ] `process-claims` worker: submit, confirm at 10 blocks, backoff retries, receipt-check before resubmit, `needs_attention` after 3 failures
 - [ ] Utility: ≥1,000 $JGA holders see drops 48h early
+- [ ] Rewards wallet `0xf840…a7af` funded before launch: 8M $JGA float transferred + gas strategy in place (ETH or paymaster); float-cap claim pause wired
 
 **Admin**
 - [ ] Artwork CRUD with post-publish field locks; archive not delete

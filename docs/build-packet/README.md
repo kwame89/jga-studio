@@ -21,6 +21,10 @@ on Base.
 - Commerce treasury (USDC receive):
   `0x30c92610f22203a728f4762e40d23a652feba946` (EIP-7702 smart wallet;
   holds no ETH — do not build automated outbound transfers from it)
+- Rewards wallet (sends $JGA claims):
+  `0xf840b0b61db60daa04a4038f69e9d4b39a31a7af` (EIP-7702 smart wallet;
+  starting float 8,000,000 $JGA — unfunded at spec time, must hold float +
+  gas before first claim; claims pause when a claim would exceed the float)
 
 **Golden rules (never violate):**
 1. All writes via Edge Functions with service role — except a collector's

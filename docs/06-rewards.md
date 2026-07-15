@@ -12,10 +12,25 @@ to this token.
 
 Supabase is the ledger of record for *earned-but-unclaimed* balances
 (`reward_events`); the chain is the record of *claimed* tokens. Because the
-supply is pre-minted, **claims are `transfer`s from a rewards wallet, not
-mints** — the rewards wallet must hold both a $JGA float and ETH for gas,
-and a low-balance alert (float < ~30 days of projected claims, or gas
-< 20 claims' worth) goes to the admin queue.
+supply is pre-minted, **claims are `transfer`s from the rewards wallet, not
+mints**.
+
+**Rewards wallet:** `0xf840b0b61db60daa04a4038f69e9d4b39a31a7af` — a
+verified EIP-7702 smart wallet, distinct from the commerce treasury.
+Starting float: **8,000,000 $JGA** (0.8% of supply), topped up over time as
+accruals grow. A low-balance alert (float below ~30 days of projected
+claims, or gas below ~20 claims' worth) goes to the admin queue, and
+`request-claim` refuses new claims that would exceed the current float
+(collector sees "claims temporarily paused") rather than letting the worker
+fail onchain.
+
+**Launch prerequisites (unfunded as of 2026-07-15 — wallet holds no tokens
+and no ETH):**
+1. Transfer the 8,000,000 $JGA float from the deployer/holder to the
+   rewards wallet.
+2. Give it gas: either fund with ETH, or run the claim worker through a
+   paymaster/bundler (it's a smart wallet, so sponsored userOps are an
+   option — decide before building `process-claims`).
 
 All earn rates below are **config values, editable by admin**, with the
 launch defaults shown. Amounts stored as 18-decimal integers.
@@ -111,16 +126,19 @@ implying financial return.
 ## 8. Open questions
 
 - Earn-rate review cadence — rates are config, but who signs off changes?
-- Which wallet serves as the **rewards wallet** (holds $JGA float + gas)?
-  It should be distinct from the commerce treasury
-  (`0x30c9…A946`), which is an EIP-7702 smart wallet currently holding no
-  ETH. How much of the 1B supply is allocated to the rewards float?
+- Gas strategy for the rewards wallet: plain ETH funding vs
+  paymaster-sponsored userOps (§1 launch prerequisites) — decide before
+  building `process-claims`.
 
 *(Resolved 2026-07-15: contract exists — `jga_studio` at `0xcc3b…4b9a`,
-pre-minted 1B supply → claims are transfers, not mints. See §1.)*
+pre-minted 1B supply → claims are transfers, not mints. Rewards wallet is
+`0xf840…a7af` with an 8M $JGA starting float. See §1.)*
 
 ## Changelog
 
+- v0.3 (2026-07-15) — Rewards wallet recorded (`0xf840…a7af`, 8M $JGA
+  starting float); launch funding prerequisites and float-cap claim guard
+  added.
 - v0.2 (2026-07-15) — Token verified onchain (`jga_studio`, 1B pre-minted):
   claims are transfers; rewards-wallet float/gas requirements added.
 - v0.1 (2026-07-15) — Initial draft.

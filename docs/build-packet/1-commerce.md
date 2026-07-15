@@ -103,7 +103,9 @@ Event lifecycle: `pending → claimable → claimed`, or `→ voided`
 $JGA; no open claim. Atomically sweep claimable events → `reward_claims`
 (`pending`, unique `idempotency_key`, wallet snapshot). Worker submits
 ERC-20 **transfer** (supply is pre-minted — never mint) from the rewards
-wallet, which holds the $JGA float + ETH gas (studio pays gas) →
+wallet `0xf840…a7af` (holds the $JGA float — 8M to start — plus gas;
+studio pays gas; `request-claim` pauses claims that would exceed the
+float) →
 `submitted(tx_hash)` → 10 confs → `confirmed`.
 
 **Failure:** backoff retries 1/5/25 min; before any resubmit, check receipt
