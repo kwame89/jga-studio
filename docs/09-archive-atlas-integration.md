@@ -96,7 +96,34 @@ logs sales in Atlas manually**, as he would for any offline sale.
 | Automated sale writeback to Atlas | **Out** — §6, manual for now |
 | Atlas mainnet migration | Atlas's own decision, out of JGA scope |
 
-## 8. Open questions
+## 8. Implementation status & deployment (2026-07-15)
+
+Both sides are implemented and pushed; deployment is the remaining step.
+
+| Piece | Where |
+|---|---|
+| `atlas-import` receiver | `supabase/functions/atlas-import/index.ts` (this repo) |
+| Schema for it (Atlas columns, `art_images`, audit log, `artwork` bucket) | `supabase/migrations/20260715000000_atlas_import.sql` — written against the **live v1 schema** (bigint ids, `image_url`, `price_usd`), guarded so the beta 2 rebuild can run over it |
+| `push-to-jga` sender + UI | archive-atlas repo: `supabase/functions/push-to-jga/`, `src/components/PushToJgaButton.tsx` (JGA Studio panel on the artwork page, root-artist controllers only) |
+
+Deploy runbook:
+1. Generate the shared secret once: `openssl rand -hex 32`.
+2. **JGA project:** run the migration; `supabase functions deploy
+   atlas-import --no-verify-jwt`; set secrets `ATLAS_SHARED_SECRET`,
+   `ATLAS_ROOT_ARTIST_ID` (Jay's Atlas profile uuid).
+3. **Atlas project:** `supabase functions deploy push-to-jga`; set secrets
+   `JGA_IMPORT_URL`, `JGA_PUSH_SHARED_SECRET` (same value), `ATLAS_PUBLIC_URL`.
+4. Smoke test: push one artwork from its Atlas page; confirm the piece
+   appears in JGA `art_pieces` (unpriced), images land in the `artwork`
+   bucket, and an `admin_audit_log` row exists. Re-push and confirm images
+   report `unchanged`.
+
+v1-specific behaviors (superseded by the beta 2 rebuild): edition info is
+appended to the description (v1 has no edition columns); `image_url` is
+kept pointed at the primary image copy so the current app renders it;
+`alt_text` falls back to the title (Atlas doesn't capture alt text yet).
+
+## 9. Open questions
 
 - Where does the shared HMAC secret live and rotate? (Both projects'
   Supabase secrets; propose 90-day manual rotation to start.)
@@ -108,5 +135,8 @@ logs sales in Atlas manually**, as he would for any offline sale.
 
 ## Changelog
 
+- v0.2 (2026-07-15) — Both sides implemented (§8): `atlas-import` +
+  migration in this repo, `push-to-jga` + artwork-page button in the
+  archive-atlas repo. Deployment runbook added.
 - v0.1 (2026-07-15) — Initial draft from the Archive Atlas PRD/schema
   review and Jay's proposal to use it as the artwork backend.
