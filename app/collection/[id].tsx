@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '../../themeContext';
+import { StudioLogo } from '../../components/StudioLogo';
 import {
   formatArtworkPrice,
   formatCollectionYears,
@@ -99,9 +100,9 @@ export default function CollectionDetail() {
           onPress={() => router.back()}
           accessibilityLabel="Go back"
         >
-          <Ionicons name="arrow-back" size={21} color={theme.text} />
+          <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Collection</Text>
+        <StudioLogo compact />
         <View style={styles.iconButtonSpacer} />
       </View>
 
@@ -186,6 +187,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       backgroundColor: theme.background,
     },
     content: {
+      width: '100%',
+      maxWidth: 760,
+      alignSelf: 'center',
       paddingBottom: 72,
     },
     centered: {
@@ -230,25 +234,21 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      backgroundColor: '#09090A',
     },
     iconButton: {
       width: 40,
       height: 40,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: theme.card,
+      backgroundColor: '#171519',
       borderWidth: 1,
-      borderColor: theme.border,
-      borderRadius: 8,
+      borderColor: '#343037',
+      borderRadius: 6,
     },
     iconButtonSpacer: {
       width: 40,
       height: 40,
-    },
-    topBarTitle: {
-      color: theme.text,
-      fontSize: 14,
-      fontWeight: '700',
     },
     hero: {
       width: '100%',

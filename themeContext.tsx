@@ -45,11 +45,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const theme: Theme = {
     isDark,
-    background: isDark ? '#121212' : '#F8F5F0',
-    card: isDark ? '#1E1E1E' : '#FFFFFF',
-    text: isDark ? '#FFFFFF' : '#3C2A5E',
-    accent: '#6B4E9E', // Royal purple stays the same in both modes
-    border: isDark ? '#333' : '#ddd',
+    background: isDark ? '#09090A' : '#F4F3F0',
+    card: isDark ? '#151416' : '#FFFFFF',
+    text: isDark ? '#F7F5F8' : '#18161B',
+    accent: isDark ? '#B264FF' : '#7138A8',
+    border: isDark ? '#302D33' : '#D7D3DA',
     toggleDarkMode,
   };
 

@@ -10,13 +10,7 @@ export type StudioSeries = {
   key: string;
   title: string;
   blurb: string;
-  // Mediums (as stored on art_pieces.medium) that belong to this series;
-  // used to link a series to its works on Discover.
-  mediums: string[];
-  // Which Discover category chip a series card opens (Discover filters by a
-  // single medium category). Best-fit; an approximation for multi-medium
-  // series like Illustration.
-  discoverCategory: 'Paintings' | 'Mixed Media' | 'Prints' | 'Drawings';
+  discoverCategory: 'illustration' | 'paint' | 'experimental';
 };
 
 export const STUDIO = {
@@ -66,22 +60,19 @@ export const STUDIO = {
       key: 'illustration',
       title: 'Illustration',
       blurb: 'Line, character, and narrative work — drawings and prints.',
-      mediums: ['Drawing', 'Drawings', 'Print', 'Prints', 'Illustration'],
-      discoverCategory: 'Drawings',
+      discoverCategory: 'illustration',
     },
     {
       key: 'paint',
       title: 'Paint',
       blurb: 'Original paintings on canvas and panel.',
-      mediums: ['Painting', 'Paintings'],
-      discoverCategory: 'Paintings',
+      discoverCategory: 'paint',
     },
     {
       key: 'experimental',
       title: 'Experimental',
       blurb: 'Mixed-media and process-driven pieces that break the frame.',
-      mediums: ['Mixed Media', 'mixed media', 'Mixed media', 'Experimental'],
-      discoverCategory: 'Mixed Media',
+      discoverCategory: 'experimental',
     },
   ] as StudioSeries[],
 } as const;

@@ -12,6 +12,11 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
+import { StudioLogo } from './StudioLogo';
+import {
+  getStudioCategory,
+  getStudioCategoryDefinition,
+} from '../lib/artworkCategories';
 
 type Artwork = {
   id: string | number;
@@ -21,7 +26,9 @@ type Artwork = {
   price_usd?: number;
   description?: string;
   medium?: string;
-  collection_type?: string;
+  art_type?: string | null;
+  subject_matter?: string | null;
+  tags?: string[] | null;
   created_at?: string;
   provenance_url?: string | null;
 };
@@ -62,6 +69,9 @@ export default function ArtworkDetailImpl() {
   };
 
   const displayPrice = artwork?.price_usd ?? artwork?.price ?? null;
+  const studioCategory = artwork
+    ? getStudioCategoryDefinition(getStudioCategory(artwork))
+    : null;
 
   if (loading) {
     return (
@@ -99,27 +109,20 @@ export default function ArtworkDetailImpl() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.brandHeader}>
-        <Text
-          style={[
-            styles.brandText,
-            { color: theme.isDark ? '#9C9C9C' : '#6E6A75' },
-          ]}
-        >
-          JGA Studio
-        </Text>
+        <StudioLogo compact />
       </View>
 
       <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-        <Text style={[styles.backText, { color: theme.accent }]}>← Back</Text>
+        <Text style={[styles.backText, { color: theme.accent }]}>Back</Text>
       </TouchableOpacity>
 
       <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <Image source={{ uri: artwork.image_url }} style={styles.image} resizeMode="contain" />
 
         <View style={styles.metaSection}>
-          {!!artwork.collection_type && (
+          {!!studioCategory && (
             <Text style={[styles.eyebrow, { color: theme.accent }]}>
-              {artwork.collection_type}
+              {studioCategory.label}
             </Text>
           )}
 
@@ -184,30 +187,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 24,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
     paddingBottom: 80,
   },
   brandHeader: {
-    marginBottom: 16,
-  },
-  brandText: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    minHeight: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#09090A',
   },
   backRow: {
-    marginBottom: 16,
+    marginVertical: 16,
+    marginHorizontal: 18,
   },
   backText: {
     fontSize: 16,
     fontWeight: '700',
   },
   card: {
-    borderRadius: 20,
+    borderRadius: 6,
     borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginHorizontal: 18,
+    marginBottom: 18,
   },
   image: {
     width: '100%',
@@ -220,7 +224,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0,
     marginBottom: 8,
   },
   title: {
@@ -247,7 +251,7 @@ const styles = StyleSheet.create({
   provenance: {
     marginTop: 16,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     padding: 16,
   },
   provenanceTitle: {
@@ -261,8 +265,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   noticeCard: {
-    borderRadius: 20,
+    borderRadius: 6,
     borderWidth: 1,
+    marginHorizontal: 18,
     padding: 20,
   },
   noticeTitle: {
@@ -279,7 +284,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingVertical: 14,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: 6,
     alignSelf: 'flex-start',
   },
   buttonText: {

@@ -6,6 +6,9 @@ export type StudioArtwork = {
   image_url: string | null;
   price_usd: number | null;
   medium: string | null;
+  art_type: string | null;
+  subject_matter: string | null;
+  tags: string[];
   year: number | null;
 };
 
@@ -62,7 +65,7 @@ async function loadPublishedCollections(
 
   const { data: artworkData, error: artworkError } = await supabase
     .from('art_pieces')
-    .select('id, title, image_url, price_usd, medium, year')
+    .select('*')
     .in('id', pieceIds)
     .not('published_at', 'is', null);
   if (artworkError) throw artworkError;
@@ -107,7 +110,7 @@ export async function getPublishedCollection(
 export async function listPublishedArtworks(): Promise<StudioArtwork[]> {
   const { data, error } = await supabase
     .from('art_pieces')
-    .select('id, title, image_url, price_usd, medium, year')
+    .select('*')
     .not('atlas_artwork_id', 'is', null)
     .not('published_at', 'is', null)
     .order('created_at', { ascending: false });

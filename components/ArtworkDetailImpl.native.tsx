@@ -19,6 +19,11 @@ import ImageViewing from 'react-native-image-viewing';
 import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
+import { StudioLogo } from './StudioLogo';
+import {
+  getStudioCategory,
+  getStudioCategoryDefinition,
+} from '../lib/artworkCategories';
 
 type Artwork = {
   id: number;
@@ -32,7 +37,9 @@ type Artwork = {
   year: number | null;
   condition: string | null;
   signed: string | null;
-  collection_type: string | null;
+  art_type: string | null;
+  subject_matter: string | null;
+  tags: string[] | null;
   is_auction: boolean | null;
   auction_end_time: string | null;
   provenance_url: string | null;
@@ -284,6 +291,13 @@ useEffect(() => {
     () => formatAuctionEndTime(artwork?.auction_end_time || null),
     [artwork?.auction_end_time]
   );
+  const studioCategory = useMemo(
+    () =>
+      artwork
+        ? getStudioCategoryDefinition(getStudioCategory(artwork))
+        : null,
+    [artwork],
+  );
 
   if (loading) {
     return (
@@ -310,19 +324,21 @@ useEffect(() => {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
-            <Ionicons name="chevron-back" size={24} color={theme.text} />
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
+
+          <StudioLogo compact />
 
           <View style={styles.actions}>
             <TouchableOpacity onPress={handleShare} style={styles.iconBtn}>
-              <Ionicons name="share-social-outline" size={22} color={theme.text} />
+              <Ionicons name="share-social-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleToggleSave} style={styles.iconBtn}>
               <Ionicons
                 name={saved ? 'heart' : 'heart-outline'}
-                size={22}
-                color={saved ? theme.accent : theme.text}
+                size={20}
+                color={saved ? theme.accent : '#FFFFFF'}
               />
             </TouchableOpacity>
           </View>
@@ -341,6 +357,10 @@ useEffect(() => {
             <Ionicons name="hammer-outline" size={16} color={theme.accent} />
             <Text style={styles.auctionBadgeText}>Live Auction</Text>
           </View>
+        )}
+
+        {studioCategory && (
+          <Text style={styles.category}>{studioCategory.label}</Text>
         )}
 
         <Text style={styles.title}>{artwork.title || 'Untitled'}</Text>
@@ -450,8 +470,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       backgroundColor: theme.background,
     },
     content: {
-      paddingHorizontal: 20,
-      paddingTop: 10,
+      paddingHorizontal: 18,
+      paddingTop: 0,
       paddingBottom: 140,
     },
     center: {
@@ -460,28 +480,33 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       alignItems: 'center',
     },
     topBar: {
+      marginHorizontal: -18,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
       flexDirection: 'row',
+      alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 28,
+      marginBottom: 22,
+      backgroundColor: '#09090A',
     },
     actions: {
       flexDirection: 'row',
     },
     iconBtn: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: theme.card,
+      width: 40,
+      height: 40,
+      borderRadius: 6,
+      backgroundColor: '#171519',
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: '#343037',
       alignItems: 'center',
       justifyContent: 'center',
-      marginLeft: 12,
+      marginLeft: 8,
     },
     image: {
       width: '100%',
       height: 320,
-      borderRadius: 16,
+      borderRadius: 6,
       marginBottom: 20,
     },
     auctionBadge: {
@@ -506,6 +531,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       color: theme.text,
       marginBottom: 6,
     },
+    category: {
+      color: theme.accent,
+      fontSize: 11,
+      lineHeight: 16,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      marginBottom: 5,
+    },
     price: {
       fontSize: 22,
       fontWeight: '700',
@@ -516,7 +549,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: 16,
+      borderRadius: 6,
       padding: 16,
       marginBottom: 20,
     },
@@ -561,7 +594,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       borderWidth: 1,
       borderColor: theme.border,
       padding: 18,
-      borderRadius: 16,
+      borderRadius: 6,
       marginBottom: 20,
     },
     provenanceTextWrap: {
@@ -582,7 +615,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     shipping: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F3EAFB',
       padding: 18,
-      borderRadius: 16,
+      borderRadius: 6,
       marginBottom: 28,
     },
     shippingTitle: {
@@ -637,7 +670,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       backgroundColor: theme.accent,
       paddingHorizontal: 22,
       paddingVertical: 14,
-      borderRadius: 14,
+      borderRadius: 6,
       alignItems: 'center',
       justifyContent: 'center',
       minWidth: 120,

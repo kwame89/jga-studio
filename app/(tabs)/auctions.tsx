@@ -37,7 +37,6 @@ type ArtPieceRow = {
   title: string;
   image_url: string;
   medium?: string | null;
-  collection_type?: string | null;
 };
 
 type AuctionLotMerged = AuctionLotRow & {
@@ -46,6 +45,7 @@ type AuctionLotMerged = AuctionLotRow & {
 
 type AuctionCardItem = {
   id: string;
+  artworkId: number;
   title: string;
   image_url: string;
   medium?: string | null;
@@ -118,6 +118,7 @@ function mapLot(row: AuctionLotMerged): AuctionCardItem | null {
 
   return {
     id: row.id,
+    artworkId: row.art_piece_id,
     title: row.art_piece.title,
     image_url: row.art_piece.image_url,
     medium: row.art_piece.medium,
@@ -190,7 +191,7 @@ export default function Auctions() {
     // are dropped below when no piece matches.
     const { data: artPiecesData, error: artPiecesError } = await supabase
       .from('art_pieces')
-      .select('id, title, image_url, medium, collection_type')
+      .select('id, title, image_url, medium')
       .not('atlas_artwork_id', 'is', null)
       .not('published_at', 'is', null)
       .in('id', artPieceIds);
@@ -247,7 +248,7 @@ export default function Auctions() {
   const totalActiveLots = liveAuctions.length + upcomingAuctions.length;
 
   const handleLotPress = (item: AuctionCardItem) => {
-    router.push(`/artwork/${item.id}`);
+    router.push(`/artwork/${item.artworkId}`);
   };
 
   return (

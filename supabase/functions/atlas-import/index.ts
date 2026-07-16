@@ -160,6 +160,7 @@ interface PushedArtwork {
   edition_total: number | null;
   description: string | null;
   tags: string[];
+  art_type: string | null;
   subject_matter: string | null;
   provenance_url: string;
   images: PushedImage[];
@@ -298,6 +299,8 @@ async function importOne(supabase: any, item: PushedArtwork) {
     year: item.year,
     description: item.description ? `${item.description}${editionSuffix}` : item.description,
     tags: Array.isArray(item.tags) ? item.tags : [],
+    art_type: item.art_type,
+    subject_matter: item.subject_matter,
     provenance_url: item.provenance_url,
     atlas_synced_at: new Date().toISOString(),
   };
