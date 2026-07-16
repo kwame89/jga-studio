@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Linking,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,7 @@ import { base } from 'viem/chains';
 import { useTheme } from '../../themeContext';
 import { supabase } from '../../supabaseClient';
 import StudioCatalogManager from '../../components/StudioCatalogManager';
+import { StudioMasthead } from '../../components/StudioMasthead';
 
 type WishlistItem = {
   id: number;
@@ -280,7 +282,9 @@ function transferSortValue(item: TransferItem) {
 
 export default function Profile() {
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const { width } = useWindowDimensions();
+  const desktopWeb = Platform.OS === 'web' && width >= 960;
+  const styles = createStyles(theme, desktopWeb);
 
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [emailInput, setEmailInput] = useState('');
@@ -1138,12 +1142,20 @@ const handleQrScanned = ({ data }: { data: string }) => {
     <>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Image source={require('../../assets/logo.png')} style={styles.avatar} />
+        <View style={styles.shell}>
+        <StudioMasthead
+          desktop={desktopWeb}
+          eyebrow="Collector account"
+          title="Profile"
+        />
 
+        <View style={styles.header}>
+          <View style={styles.identityMark}>
+            <Ionicons name="person-outline" size={28} color={theme.accent} />
+          </View>
           <Text style={styles.name}>
             {isSignedIn ? 'JGA Studio Collector' : 'JGA Studio Profile'}
           </Text>
@@ -1682,6 +1694,7 @@ const handleQrScanned = ({ data }: { data: string }) => {
             <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
         )}
+        </View>
       </ScrollView>
 
       <Modal
@@ -1707,7 +1720,7 @@ const handleQrScanned = ({ data }: { data: string }) => {
                       data={walletAddress || ''}
                       style={{
                         backgroundColor: '#FFFFFF',
-                        borderRadius: 20,
+                        borderRadius: 4,
                         padding: 20,
                       }}
                       padding={20}
@@ -1959,19 +1972,12 @@ const handleQrScanned = ({ data }: { data: string }) => {
 
 function Section({ title, children }: any) {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const styles = createStyles(theme, Platform.OS === 'web' && width >= 960);
 
   return (
-    <View style={{ paddingHorizontal: 18, marginTop: 30 }}>
-      <Text
-        style={{
-          color: theme.text,
-          fontSize: 20,
-          fontWeight: '700',
-          marginBottom: 12,
-        }}
-      >
-        {title}
-      </Text>
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {children}
     </View>
   );
@@ -2009,10 +2015,19 @@ function Empty({ text }: any) {
   );
 }
 
-const createStyles = (theme: any) =>
+const createStyles = (theme: any, desktopWeb = false) =>
   StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: theme.background,
+    },
+    scrollContent: {
+      alignItems: 'center',
+      paddingBottom: desktopWeb ? 72 : 120,
+    },
+    shell: {
+      width: '100%',
+      maxWidth: desktopWeb ? 1180 : 760,
       backgroundColor: theme.background,
     },
 
@@ -2032,20 +2047,29 @@ const createStyles = (theme: any) =>
 
     header: {
       alignItems: 'center',
-      paddingTop: Platform.OS === 'ios' ? 60 : 30,
-      paddingBottom: 20,
+      paddingHorizontal: 18,
+      paddingTop: desktopWeb ? 52 : 30,
+      paddingBottom: desktopWeb ? 38 : 24,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
 
-    avatar: {
-      width: 90,
-      height: 90,
-      borderRadius: 45,
-      marginBottom: 12,
+    identityMark: {
+      width: 62,
+      height: 62,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      backgroundColor: theme.card,
     },
 
     name: {
-      fontSize: 24,
-      fontWeight: '700',
+      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
+      fontSize: desktopWeb ? 38 : 27,
+      lineHeight: desktopWeb ? 45 : 34,
       color: theme.text,
       textAlign: 'center',
     },
@@ -2070,7 +2094,7 @@ const createStyles = (theme: any) =>
       backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 4,
     },
 
     tierText: {
@@ -2086,7 +2110,7 @@ const createStyles = (theme: any) =>
       backgroundColor: theme.card,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 4,
       borderWidth: 1,
       borderColor: theme.border,
     },
@@ -2104,7 +2128,7 @@ const createStyles = (theme: any) =>
       backgroundColor: theme.accent,
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 4,
     },
 
     adminBadgeText: {
@@ -2115,11 +2139,22 @@ const createStyles = (theme: any) =>
 
     card: {
       backgroundColor: theme.card,
-      borderRadius: 18,
-      padding: 16,
+      borderRadius: 6,
+      padding: desktopWeb ? 22 : 16,
       marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.border,
+    },
+    section: {
+      paddingHorizontal: desktopWeb ? 36 : 18,
+      marginTop: desktopWeb ? 46 : 30,
+    },
+    sectionTitle: {
+      color: theme.text,
+      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
+      fontSize: desktopWeb ? 28 : 22,
+      lineHeight: desktopWeb ? 34 : 28,
+      marginBottom: 14,
     },
 
     row: {
@@ -2144,7 +2179,7 @@ const createStyles = (theme: any) =>
 
     tokenPortfolioCard: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F7F2FF',
-      borderRadius: 16,
+      borderRadius: 6,
       padding: 14,
       marginBottom: 12,
     },
@@ -2246,7 +2281,7 @@ const createStyles = (theme: any) =>
 
     savedWalletCard: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F7F2FF',
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 14,
       marginTop: 8,
       marginBottom: 12,
@@ -2355,7 +2390,7 @@ const createStyles = (theme: any) =>
 
     rewardsHero: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F7F2FF',
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 14,
       marginBottom: 12,
     },
@@ -2383,7 +2418,7 @@ const createStyles = (theme: any) =>
     rewardsStatPill: {
       flex: 1,
       backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
-      borderRadius: 12,
+      borderRadius: 6,
       padding: 12,
     },
 
@@ -2402,7 +2437,7 @@ const createStyles = (theme: any) =>
 
     rewardHistoryCard: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F7F2FF',
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 14,
       marginTop: 12,
     },
@@ -2462,7 +2497,7 @@ const createStyles = (theme: any) =>
       color: theme.text,
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: 12,
+      borderRadius: 4,
       paddingHorizontal: 14,
       paddingVertical: 12,
       marginBottom: 10,
@@ -2477,7 +2512,7 @@ const createStyles = (theme: any) =>
 
     sendTokenPanel: {
       backgroundColor: theme.isDark ? '#201a29' : '#F7F2FF',
-      borderRadius: 16,
+      borderRadius: 6,
       padding: 14,
       marginBottom: 14,
       borderWidth: 1,
@@ -2535,7 +2570,7 @@ const createStyles = (theme: any) =>
 
     selectedBalanceCard: {
       backgroundColor: theme.card,
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 14,
       borderWidth: 1,
       borderColor: theme.border,
@@ -2588,7 +2623,7 @@ const createStyles = (theme: any) =>
       color: theme.text,
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: 12,
+      borderRadius: 4,
       paddingHorizontal: 14,
       paddingVertical: 12,
     },
@@ -2596,7 +2631,7 @@ const createStyles = (theme: any) =>
     qrScanButton: {
       width: 48,
       height: 48,
-      borderRadius: 12,
+      borderRadius: 4,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
@@ -2608,7 +2643,7 @@ const createStyles = (theme: any) =>
       width: '100%',
       height: 320,
       overflow: 'hidden',
-      borderRadius: 18,
+      borderRadius: 6,
       borderWidth: 1,
       borderColor: theme.border,
       marginBottom: 14,
@@ -2621,7 +2656,7 @@ const createStyles = (theme: any) =>
 
     sendPreviewCard: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F7F2FF',
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 14,
       marginBottom: 12,
     },
@@ -2650,7 +2685,7 @@ const createStyles = (theme: any) =>
 
     modalTxCard: {
       backgroundColor: theme.isDark ? '#1f2a22' : '#EFFAF2',
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 12,
       marginBottom: 12,
       borderWidth: 1,
@@ -2699,7 +2734,7 @@ const createStyles = (theme: any) =>
     primaryButton: {
       backgroundColor: theme.accent,
       paddingVertical: 12,
-      borderRadius: 12,
+      borderRadius: 4,
       alignItems: 'center',
     },
 
@@ -2707,7 +2742,7 @@ const createStyles = (theme: any) =>
       flex: 1,
       backgroundColor: theme.accent,
       paddingVertical: 12,
-      borderRadius: 12,
+      borderRadius: 4,
       alignItems: 'center',
     },
 
@@ -2719,7 +2754,7 @@ const createStyles = (theme: any) =>
     secondaryButton: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
       paddingVertical: 12,
-      borderRadius: 12,
+      borderRadius: 4,
       alignItems: 'center',
       marginTop: 10,
     },
@@ -2728,7 +2763,7 @@ const createStyles = (theme: any) =>
       flex: 1,
       paddingHorizontal: 12,
       paddingVertical: 12,
-      borderRadius: 12,
+      borderRadius: 4,
       alignItems: 'center',
       backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
     },
@@ -2752,7 +2787,7 @@ const createStyles = (theme: any) =>
     lastTxCard: {
       marginTop: 12,
       backgroundColor: theme.isDark ? '#1f2a22' : '#EFFAF2',
-      borderRadius: 14,
+      borderRadius: 6,
       padding: 14,
       borderWidth: 1,
       borderColor: theme.isDark ? '#35513d' : '#CFE6D5',
@@ -2795,7 +2830,7 @@ const createStyles = (theme: any) =>
 
     lastTxActionButton: {
       flex: 1,
-      borderRadius: 10,
+      borderRadius: 4,
       paddingVertical: 10,
       alignItems: 'center',
       backgroundColor: theme.card,
@@ -2812,7 +2847,7 @@ const createStyles = (theme: any) =>
     collectionImage: {
       width: 120,
       height: 120,
-      borderRadius: 16,
+      borderRadius: 4,
       marginRight: 12,
     },
 
@@ -2821,7 +2856,7 @@ const createStyles = (theme: any) =>
       alignItems: 'center',
       backgroundColor: theme.card,
       padding: 12,
-      borderRadius: 16,
+      borderRadius: 6,
       marginBottom: 10,
       borderWidth: 1,
       borderColor: theme.border,
@@ -2830,7 +2865,7 @@ const createStyles = (theme: any) =>
     wishlistImage: {
       width: 60,
       height: 60,
-      borderRadius: 10,
+      borderRadius: 4,
       marginRight: 12,
     },
 
@@ -2850,7 +2885,7 @@ const createStyles = (theme: any) =>
       alignItems: 'center',
       backgroundColor: theme.card,
       padding: 16,
-      borderRadius: 16,
+      borderRadius: 6,
       marginBottom: 10,
       borderWidth: 1,
       borderColor: theme.border,
@@ -2866,7 +2901,7 @@ const createStyles = (theme: any) =>
       marginHorizontal: 18,
       marginTop: 24,
       padding: 16,
-      borderRadius: 18,
+      borderRadius: 4,
       backgroundColor: '#ff4444',
       alignItems: 'center',
     },
@@ -2885,7 +2920,7 @@ const createStyles = (theme: any) =>
 
     modalCard: {
       backgroundColor: theme.card,
-      borderRadius: 24,
+      borderRadius: 8,
       padding: 20,
       borderWidth: 1,
       borderColor: theme.border,
@@ -2914,7 +2949,7 @@ const createStyles = (theme: any) =>
       width: 240,
       height: 240,
       backgroundColor: '#FFFFFF',
-      borderRadius: 24,
+      borderRadius: 8,
       alignItems: 'center',
       justifyContent: 'center',
       padding: 12,

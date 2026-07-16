@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { StudioLogo } from '../../components/StudioLogo';
+import { StudioMasthead } from '../../components/StudioMasthead';
 import {
   STUDIO,
   PRICE_TIERS,
@@ -206,7 +207,6 @@ export default function Home() {
         );
         return {
           ...category,
-          count: categoryWorks.length,
           cover: categoryWorks.find((artwork) => artwork.image_url) ?? null,
         };
       }),
@@ -246,17 +246,19 @@ export default function Home() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.shell}>
-        <View style={styles.masthead}>
-          <StudioLogo />
-          <TouchableOpacity
-            style={styles.mastheadButton}
-            activeOpacity={0.8}
-            onPress={() => router.push('/notifications')}
-            accessibilityLabel="Notifications"
-          >
-            <Ionicons name="notifications-outline" size={20} color="#F8F5FA" />
-          </TouchableOpacity>
-        </View>
+        <StudioMasthead
+          desktop={desktopWeb}
+          action={
+            <TouchableOpacity
+              style={styles.mastheadButton}
+              activeOpacity={0.8}
+              onPress={() => router.push('/notifications')}
+              accessibilityLabel="Notifications"
+            >
+              <Ionicons name="notifications-outline" size={20} color="#F8F5FA" />
+            </TouchableOpacity>
+          }
+        />
 
         {heroArtwork?.image_url ? (
           <Link href={`/artwork/${heroArtwork.id}`} asChild>
@@ -267,16 +269,6 @@ export default function Home() {
                   style={styles.heroImage}
                   resizeMode="contain"
                 />
-                <View style={styles.heroCounter}>
-                  <Text style={styles.heroCounterText}>
-                    {String((heroIndex % heroCandidates.length) + 1).padStart(
-                      2,
-                      '0',
-                    )}
-                    {' / '}
-                    {String(heroCandidates.length).padStart(2, '0')}
-                  </Text>
-                </View>
               </View>
               <View style={styles.heroCaption}>
                 <View style={styles.heroCopy}>
@@ -407,10 +399,9 @@ export default function Home() {
                     )}
                   </View>
                   <View style={styles.categoryCopy}>
-                    <View style={styles.categoryTitleRow}>
-                      <Text style={styles.categoryTitle}>{category.label}</Text>
-                      <Text style={styles.categoryCount}>{category.count}</Text>
-                    </View>
+                      <View style={styles.categoryTitleRow}>
+                        <Text style={styles.categoryTitle}>{category.label}</Text>
+                      </View>
                     <Text style={styles.categoryDescription} numberOfLines={2}>
                       {category.shortDescription}
                     </Text>
@@ -481,10 +472,7 @@ export default function Home() {
                             <View style={styles.categoryPlaceholder} />
                           )}
                         </View>
-                        <Text style={styles.collectionEyebrow}>
-                          {collection.artworks.length}{' '}
-                          {collection.artworks.length === 1 ? 'work' : 'works'}
-                        </Text>
+                        <Text style={styles.collectionEyebrow}>Studio collection</Text>
                         <Text style={styles.collectionTitle} numberOfLines={2}>
                           {collection.title}
                         </Text>
@@ -694,18 +682,6 @@ const createStyles = (
       overflow: 'hidden',
       backgroundColor: theme.background,
     },
-    masthead: {
-      minHeight: desktopWeb ? 104 : Platform.OS === 'ios' ? 134 : 102,
-      paddingTop: desktopWeb ? 16 : Platform.OS === 'ios' ? 52 : 16,
-      paddingHorizontal: desktopWeb ? 42 : 18,
-      paddingBottom: desktopWeb ? 16 : 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: '#080709',
-      borderBottomWidth: 1,
-      borderBottomColor: '#2A1E34',
-    },
     mastheadButton: {
       width: 40,
       height: 40,
@@ -728,26 +704,6 @@ const createStyles = (
     heroImage: {
       width: '100%',
       height: '100%',
-    },
-    heroCounter: {
-      minWidth: 58,
-      height: 30,
-      position: 'absolute',
-      top: 14,
-      right: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 8,
-      backgroundColor: 'rgba(7, 6, 8, 0.82)',
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.24)',
-      borderRadius: 4,
-    },
-    heroCounterText: {
-      color: '#F5F2F7',
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0,
     },
     heroCaption: {
       width: desktopWeb ? '32%' : '100%',
@@ -972,11 +928,6 @@ const createStyles = (
     categoryTitle: {
       color: theme.text,
       fontSize: 17,
-      fontWeight: '800',
-    },
-    categoryCount: {
-      color: theme.accent,
-      fontSize: 11,
       fontWeight: '800',
     },
     categoryDescription: {

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useLocalSearchParams } from 'expo-router';
-import { StudioLogo } from '../../components/StudioLogo';
+import { StudioMasthead } from '../../components/StudioMasthead';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -123,13 +123,11 @@ export default function Discover() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.shell}>
-        <View style={styles.masthead}>
-          <StudioLogo compact={!desktopWeb} />
-          <View style={styles.mastheadCopy}>
-            <Text style={styles.mastheadEyebrow}>The catalog</Text>
-            <Text style={styles.mastheadTitle}>Discover</Text>
-          </View>
-        </View>
+        <StudioMasthead
+          desktop={desktopWeb}
+          eyebrow="The catalog"
+          title="Discover"
+        />
 
         <View style={styles.intro}>
           <Text style={styles.introTitle}>Find the work that stays with you.</Text>
@@ -197,13 +195,10 @@ export default function Discover() {
                 <SectionHeading
                   eyebrow="Curated by the artist"
                   title="Bodies of work"
-                  detail={`${collections.length} ${
-                    collections.length === 1 ? 'collection' : 'collections'
-                  }`}
                   styles={styles}
                 />
                 <View style={styles.collectionList}>
-                  {collections.map((collection, index) => (
+                  {collections.map((collection) => (
                     <Link
                       key={collection.id}
                       href={`/collection/${collection.id}`}
@@ -229,22 +224,11 @@ export default function Discover() {
                               />
                             </View>
                           )}
-                          <View style={styles.collectionIndex}>
-                            <Text style={styles.collectionIndexText}>
-                              {String(index + 1).padStart(2, '0')}
-                            </Text>
-                          </View>
                         </View>
                         <View style={styles.collectionCopy}>
-                          <View style={styles.collectionMetaRow}>
-                            <Text style={styles.collectionMeta}>
-                              {formatCollectionYears(collection)}
-                            </Text>
-                            <Text style={styles.collectionMeta}>
-                              {collection.artworks.length}{' '}
-                              {collection.artworks.length === 1 ? 'work' : 'works'}
-                            </Text>
-                          </View>
+                          <Text style={styles.collectionMeta}>
+                            {formatCollectionYears(collection)}
+                          </Text>
                           <Text style={styles.collectionTitle}>
                             {collection.title}
                           </Text>
@@ -292,9 +276,6 @@ export default function Discover() {
                   activeCategory ? activeCategory.shortDescription : 'Full catalog'
                 }
                 title={activeCategory ? `${activeCategory.label} works` : 'Available works'}
-                detail={`${visibleArtworks.length} ${
-                  visibleArtworks.length === 1 ? 'work' : 'works'
-                }`}
                 styles={styles}
               />
 
@@ -361,12 +342,10 @@ function CategoryButton({
 function SectionHeading({
   eyebrow,
   title,
-  detail,
   styles,
 }: {
   eyebrow: string;
   title: string;
-  detail: string;
   styles: ReturnType<typeof createStyles>;
 }) {
   return (
@@ -375,7 +354,6 @@ function SectionHeading({
         <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
-      <Text style={styles.sectionDetail}>{detail}</Text>
     </View>
   );
 }
@@ -437,34 +415,6 @@ const createStyles = (
       maxWidth: desktopWeb ? 1320 : 760,
       overflow: 'hidden',
       backgroundColor: theme.background,
-    },
-    masthead: {
-      minHeight: desktopWeb ? 104 : Platform.OS === 'ios' ? 120 : 94,
-      paddingTop: desktopWeb ? 16 : Platform.OS === 'ios' ? 52 : 14,
-      paddingHorizontal: desktopWeb ? 42 : 18,
-      paddingBottom: desktopWeb ? 16 : 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: '#080709',
-      borderBottomWidth: 1,
-      borderBottomColor: '#2A1E34',
-    },
-    mastheadCopy: {
-      alignItems: 'flex-end',
-    },
-    mastheadEyebrow: {
-      color: '#B866FF',
-      fontSize: desktopWeb ? 11 : 9,
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0,
-      marginBottom: 2,
-    },
-    mastheadTitle: {
-      color: '#FFFFFF',
-      fontSize: desktopWeb ? 28 : 21,
-      fontWeight: '800',
     },
     intro: {
       paddingHorizontal: desktopWeb ? 42 : 18,
@@ -602,13 +552,6 @@ const createStyles = (
       fontSize: desktopWeb ? 34 : 25,
       lineHeight: desktopWeb ? 40 : 30,
     },
-    sectionDetail: {
-      color: theme.text,
-      opacity: 0.48,
-      fontSize: 10,
-      fontWeight: '700',
-      paddingBottom: 3,
-    },
     collectionList: {
       paddingHorizontal: desktopWeb ? 42 : 0,
       borderTopWidth: 1,
@@ -641,37 +584,10 @@ const createStyles = (
       justifyContent: 'center',
       backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
     },
-    collectionIndex: {
-      minWidth: 38,
-      height: 29,
-      position: 'absolute',
-      top: 10,
-      left: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 8,
-      backgroundColor: 'rgba(8, 7, 9, 0.84)',
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.24)',
-      borderRadius: 3,
-    },
-    collectionIndexText: {
-      color: '#FFFFFF',
-      fontSize: 9,
-      fontWeight: '800',
-      letterSpacing: 0,
-    },
     collectionCopy: {
       minWidth: 0,
       flex: desktopWeb ? 1 : 0,
       paddingTop: desktopWeb ? 0 : 15,
-    },
-    collectionMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      marginBottom: 6,
     },
     collectionMeta: {
       color: theme.accent,
@@ -679,6 +595,7 @@ const createStyles = (
       fontWeight: '800',
       textTransform: 'uppercase',
       letterSpacing: 0,
+      marginBottom: 6,
     },
     collectionTitle: {
       color: theme.text,

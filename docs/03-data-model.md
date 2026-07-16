@@ -41,7 +41,8 @@ State columns are Postgres enums matching the names in these specs exactly.
 | `series` | text null | Series name for Home narrative grouping (08 §1) |
 | `atlas_artwork_id` | uuid null **unique** | Archive Atlas record id; upsert key for `atlas-import` (09 §2) |
 | `atlas_synced_at` | timestamptz null | Last successful push from Atlas |
-| `provenance_url` | text null | Public Atlas provenance page, rendered on piece detail (09 §4) |
+| `provenance_url` | text null | Source Atlas page retained for reconciliation (09 §4) |
+| `provenance_events` | jsonb default '[]' | Read-only Atlas provenance snapshot rendered inside JGA (09 §4) |
 | `status` | enum(`draft`, `available`, `held`, `on_auction`, `sold`, `archived`) | `held`/`sold` apply to originals; editions use counters |
 | `price_cents` | int | Buy-now price (null while auction-only) |
 | `edition_size` | int null | Editions only |

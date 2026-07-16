@@ -61,10 +61,11 @@ lots, and all commerce state are JGA-owned. Two interaction rules:
 
 ## 4. Provenance surfaced to collectors
 
-- `art_pieces.provenance_url` (from the push payload) renders on the
-  piece detail page as **"View provenance record"** → Atlas's public
-  timeline. This delivers the collector-first pillars *verify
-  authenticity* and *track ownership* (08 §7).
+- `art_pieces.provenance_events` stores a read-only snapshot from the
+  signed push payload. The piece detail page renders that timeline
+  natively so web and mobile collectors remain inside JGA Studio.
+- `provenance_url` remains stored as source metadata for administration
+  and reconciliation; it is not the primary collector experience.
 - Copy stays conservative, mirroring Atlas's own trust model: "provenance
   record" / "a claim made by the artist as of [date]" — never "verified
   authentic". Note: Atlas anchors on **Stellar testnet** today; wording
@@ -94,12 +95,12 @@ logs sales in Atlas manually**, as he would for any offline sale.
 
 | Item | Status |
 |---|---|
-| `atlas_artwork_id`, `atlas_synced_at`, `provenance_url` on `art_pieces` | **In** |
+| `atlas_artwork_id`, `atlas_synced_at`, `provenance_url`, `provenance_events` on `art_pieces` | **In** |
 | `atlas-import` Edge Function (HMAC, idempotent, image copy, locks-aware) | **In** |
 | Atlas-side "Push to JGA Studio" action | **In** (built in the Atlas repo) |
 | Atlas collections + collection push | **In** |
 | Collection-led mobile Discover feed | **In** |
-| "View provenance record" link on piece pages | **In** |
+| Native provenance timeline on piece pages | **In** |
 | Automated sale writeback to Atlas | **Out** — §6, manual for now |
 | Atlas mainnet migration | Atlas's own decision, out of JGA scope |
 

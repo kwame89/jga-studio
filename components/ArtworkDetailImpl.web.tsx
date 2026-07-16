@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Linking,
   ScrollView,
   ActivityIndicator,
   useWindowDimensions,
@@ -14,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
+import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -32,6 +32,7 @@ type Artwork = {
   tags?: string[] | null;
   created_at?: string;
   provenance_url?: string | null;
+  provenance_events?: ProvenanceEvent[] | null;
 };
 
 export default function ArtworkDetailImpl() {
@@ -165,22 +166,11 @@ export default function ArtworkDetailImpl() {
             </Text>
           )}
 
-          {!!artwork.provenance_url && (
-            <TouchableOpacity
-              style={[styles.provenance, { borderColor: theme.border }]}
-              onPress={() => Linking.openURL(artwork.provenance_url!)}
-              accessibilityRole="link"
-            >
-              <Text style={[styles.provenanceTitle, { color: theme.accent }]}>
-                View provenance record ↗
-              </Text>
-              <Text style={[styles.provenanceText, { color: theme.text }]}>
-                Artist-maintained history of this work — creation, exhibitions, and ownership —
-                on Archive Atlas.
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
+      </View>
+
+      <View style={styles.provenanceSection}>
+        <ProvenanceRecord events={artwork.provenance_events} />
       </View>
 
       <View style={[styles.noticeCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -285,21 +275,9 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     marginTop: 6,
   },
-  provenance: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 16,
-  },
-  provenanceTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  provenanceText: {
-    fontSize: 13,
-    lineHeight: 20,
-    opacity: 0.7,
+  provenanceSection: {
+    marginHorizontal: 18,
+    marginBottom: 26,
   },
   noticeCard: {
     borderRadius: 6,

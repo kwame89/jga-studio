@@ -115,8 +115,9 @@ doesn't paint us into a corner, but none of it ships now:
 - **Digital Artwork Passport:** per-work record of image, title, medium,
   dimensions, date, exhibition history, ownership history, certificate
   status. *Update 2026-07-15: this substantially exists as Archive
-  Atlas's public per-piece provenance page, linked from JGA piece detail
-  via `provenance_url` (spec 09 §4) — no new JGA tables needed.*
+  Atlas's per-piece provenance record, synchronized as a read-only
+  `provenance_events` snapshot and rendered inside JGA piece detail
+  (spec 09 §4).*
 
 ## 9. Open questions
 

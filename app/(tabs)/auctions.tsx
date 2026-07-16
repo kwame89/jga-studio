@@ -9,15 +9,14 @@ import {
   FlatList,
   Alert,
   Platform,
-  Dimensions,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../supabaseClient';
 import { useTheme } from '../../themeContext';
-
-const { width } = Dimensions.get('window');
+import { StudioMasthead } from '../../components/StudioMasthead';
 
 type AuctionLotRow = {
   id: string;
@@ -150,7 +149,9 @@ function dedupeLotsByArtPiece(rows: AuctionLotMerged[]) {
 export default function Auctions() {
   const router = useRouter();
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const { width } = useWindowDimensions();
+  const desktopWeb = Platform.OS === 'web' && width >= 960;
+  const styles = createStyles(theme, desktopWeb, width);
 
   const [lots, setLots] = useState<AuctionLotMerged[]>([]);
   const [loading, setLoading] = useState(true);
@@ -245,8 +246,6 @@ export default function Auctions() {
     cta: 'View Auction Snapshot',
   };
 
-  const totalActiveLots = liveAuctions.length + upcomingAuctions.length;
-
   const handleLotPress = (item: AuctionCardItem) => {
     router.push(`/artwork/${item.artworkId}`);
   };
@@ -257,11 +256,17 @@ export default function Auctions() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>JGA Studio</Text>
-        <Text style={styles.title}>Auctions</Text>
-        <Text style={styles.subtitle}>
-          Live sales, upcoming drops, and collector bidding
+      <View style={styles.shell}>
+      <StudioMasthead
+        desktop={desktopWeb}
+        eyebrow="Timed releases"
+        title="Auctions"
+      />
+
+      <View style={styles.intro}>
+        <Text style={styles.introTitle}>Collect through the rhythm of a live sale.</Text>
+        <Text style={styles.introText}>
+          Studio releases, timed bidding, and future collector moments in one focused place.
         </Text>
       </View>
 
@@ -278,21 +283,6 @@ export default function Auctions() {
 
           <Text style={styles.heroTitle}>{featuredAuction.title}</Text>
           <Text style={styles.heroSubtitle}>{featuredAuction.subtitle}</Text>
-
-          <View style={styles.heroStatsRow}>
-            <View style={styles.heroStatPill}>
-              <Text style={styles.heroStatValue}>{liveAuctions.length}</Text>
-              <Text style={styles.heroStatLabel}>Live</Text>
-            </View>
-            <View style={styles.heroStatPill}>
-              <Text style={styles.heroStatValue}>{upcomingAuctions.length}</Text>
-              <Text style={styles.heroStatLabel}>Upcoming</Text>
-            </View>
-            <View style={styles.heroStatPill}>
-              <Text style={styles.heroStatValue}>{totalActiveLots}</Text>
-              <Text style={styles.heroStatLabel}>Total</Text>
-            </View>
-          </View>
 
           <TouchableOpacity
             style={styles.heroButton}
@@ -312,57 +302,19 @@ export default function Auctions() {
       <SectionHeader
         title="Live Auctions"
         subtitle="Lots currently open for bidding"
-        theme={theme}
+        styles={styles}
       />
 
       {loading ? (
         <LoadingBlock theme={theme} />
       ) : liveAuctions.length > 0 ? (
-        <FlatList
-          data={liveAuctions}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.lotCard}
-              activeOpacity={0.9}
-              onPress={() => handleLotPress(item)}
-            >
-              <Image
-                source={{ uri: item.image_url }}
-                style={styles.lotImage}
-                resizeMode="cover"
-              />
-              <View style={styles.lotInfo}>
-                <View style={styles.statusBadgeLive}>
-                  <Text style={styles.statusBadgeLiveText}>Live</Text>
-                </View>
-
-                <Text style={styles.lotTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-
-                {!!item.medium && (
-                  <Text style={styles.lotMeta}>{item.medium}</Text>
-                )}
-
-                <Text style={styles.bidValue}>
-                  Current Bid: {formatCurrency(item.currentBid)}
-                </Text>
-
-                <View style={styles.timeRow}>
-                  <Ionicons name="time-outline" size={16} color={theme.accent} />
-                  <Text style={styles.timeText}>{item.timeLabel}</Text>
-                </View>
-
-                <Text style={styles.bidCount}>
-                  {pluralize(item.totalBids, 'bid')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+        <AuctionRail
+          items={liveAuctions}
+          desktop={desktopWeb}
+          upcoming={false}
+          onPress={handleLotPress}
+          theme={theme}
+          styles={styles}
         />
       ) : (
         <EmptyAuctionState
@@ -376,57 +328,19 @@ export default function Auctions() {
       <SectionHeader
         title="Upcoming Auctions"
         subtitle="Preview future sale moments"
-        theme={theme}
+        styles={styles}
       />
 
       {loading ? (
         <LoadingBlock theme={theme} />
       ) : upcomingAuctions.length > 0 ? (
-        <FlatList
-          data={upcomingAuctions}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalList}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.lotCard}
-              activeOpacity={0.9}
-              onPress={() => handleLotPress(item)}
-            >
-              <Image
-                source={{ uri: item.image_url }}
-                style={styles.lotImage}
-                resizeMode="cover"
-              />
-              <View style={styles.lotInfo}>
-                <View style={styles.statusBadgeUpcoming}>
-                  <Text style={styles.statusBadgeUpcomingText}>Upcoming</Text>
-                </View>
-
-                <Text style={styles.lotTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-
-                {!!item.medium && (
-                  <Text style={styles.lotMeta}>{item.medium}</Text>
-                )}
-
-                <Text style={styles.bidValue}>
-                  Starting Bid: {formatCurrency(item.startingBid)}
-                </Text>
-
-                <View style={styles.timeRow}>
-                  <Ionicons name="calendar-outline" size={16} color={theme.accent} />
-                  <Text style={styles.timeText}>{item.timeLabel}</Text>
-                </View>
-
-                <Text style={styles.bidCount}>
-                  {pluralize(item.totalBids, 'bid')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+        <AuctionRail
+          items={upcomingAuctions}
+          desktop={desktopWeb}
+          upcoming
+          onPress={handleLotPress}
+          theme={theme}
+          styles={styles}
         />
       ) : (
         <EmptyAuctionState
@@ -440,7 +354,7 @@ export default function Auctions() {
       <SectionHeader
         title="How Bidding Works"
         subtitle="A collector-friendly guide to the sale flow"
-        theme={theme}
+        styles={styles}
       />
 
       <View style={styles.explainerGrid}>
@@ -458,7 +372,7 @@ export default function Auctions() {
       <SectionHeader
         title="Collector Tools"
         subtitle="Future features for bidding and tracking"
-        theme={theme}
+        styles={styles}
       />
 
       <View style={styles.toolsPanel}>
@@ -481,39 +395,90 @@ export default function Auctions() {
           <Text style={styles.ctaText}>View My Bids & Watchlist</Text>
         </TouchableOpacity>
       </View>
+      </View>
     </ScrollView>
+  );
+}
+
+function AuctionRail({
+  items,
+  desktop,
+  upcoming,
+  onPress,
+  theme,
+  styles,
+}: {
+  items: AuctionCardItem[];
+  desktop: boolean;
+  upcoming: boolean;
+  onPress: (item: AuctionCardItem) => void;
+  theme: ReturnType<typeof useTheme>;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const renderCard = (item: AuctionCardItem) => (
+    <TouchableOpacity
+      key={item.id}
+      style={styles.lotCard}
+      activeOpacity={0.9}
+      onPress={() => onPress(item)}
+    >
+      <Image source={{ uri: item.image_url }} style={styles.lotImage} resizeMode="cover" />
+      <View style={styles.lotInfo}>
+        <View style={upcoming ? styles.statusBadgeUpcoming : styles.statusBadgeLive}>
+          <Text style={upcoming ? styles.statusBadgeUpcomingText : styles.statusBadgeLiveText}>
+            {upcoming ? 'Upcoming' : 'Live'}
+          </Text>
+        </View>
+        <Text style={styles.lotTitle} numberOfLines={2}>{item.title}</Text>
+        {!!item.medium && <Text style={styles.lotMeta}>{item.medium}</Text>}
+        <Text style={styles.bidValue}>
+          {upcoming ? 'Starting Bid' : 'Current Bid'}:{' '}
+          {formatCurrency(upcoming ? item.startingBid : item.currentBid)}
+        </Text>
+        <View style={styles.timeRow}>
+          <Ionicons
+            name={upcoming ? 'calendar-outline' : 'time-outline'}
+            size={16}
+            color={theme.accent}
+          />
+          <Text style={styles.timeText}>{item.timeLabel}</Text>
+        </View>
+        {item.totalBids > 0 ? (
+          <Text style={styles.bidCount}>{pluralize(item.totalBids, 'bid')}</Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+
+  if (desktop) {
+    return <View style={styles.desktopLotGrid}>{items.map(renderCard)}</View>;
+  }
+
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.id}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.horizontalList}
+      renderItem={({ item }) => renderCard(item)}
+    />
   );
 }
 
 function SectionHeader({
   title,
   subtitle,
-  theme,
+  styles,
 }: {
   title: string;
   subtitle: string;
-  theme: ReturnType<typeof useTheme>;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
-    <View style={{ paddingHorizontal: 18, marginTop: 30, marginBottom: 14 }}>
-      <Text
-        style={{
-          color: theme.text,
-          fontSize: 22,
-          fontWeight: '700',
-          marginBottom: 4,
-        }}
-      >
-        {title}
-      </Text>
-      <Text
-        style={{
-          color: theme.isDark ? '#9C9C9C' : '#6E6A75',
-          fontSize: 14,
-        }}
-      >
-        {subtitle}
-      </Text>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionEyebrow}>{subtitle}</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
     </View>
   );
 }
@@ -551,7 +516,7 @@ function LoadingBlock({ theme }: { theme: ReturnType<typeof useTheme> }) {
     <View
       style={{
         marginHorizontal: 18,
-        borderRadius: 24,
+        borderRadius: 6,
         paddingVertical: 42,
         alignItems: 'center',
         justifyContent: 'center',
@@ -574,50 +539,59 @@ function LoadingBlock({ theme }: { theme: ReturnType<typeof useTheme> }) {
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>) =>
+const createStyles = (
+  theme: ReturnType<typeof useTheme>,
+  desktopWeb = false,
+  viewportWidth = 390,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
     },
     content: {
-      paddingBottom: 120,
+      alignItems: 'center',
+      paddingBottom: desktopWeb ? 72 : 120,
+    },
+    shell: {
+      width: '100%',
+      maxWidth: desktopWeb ? 1320 : 760,
+      backgroundColor: theme.background,
     },
 
-    header: {
-      paddingTop: Platform.OS === 'ios' ? 62 : 28,
-      paddingHorizontal: 18,
-      paddingBottom: 8,
+    intro: {
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingTop: desktopWeb ? 58 : 30,
+      paddingBottom: desktopWeb ? 48 : 28,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
-    eyebrow: {
-      color: theme.accent,
-      fontSize: 13,
-      fontWeight: '700',
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      marginBottom: 4,
-    },
-    title: {
-      fontSize: 30,
-      fontWeight: '700',
+    introTitle: {
+      maxWidth: desktopWeb ? 820 : 560,
       color: theme.text,
-      marginBottom: 4,
+      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
+      fontSize: desktopWeb ? 48 : 31,
+      lineHeight: desktopWeb ? 56 : 38,
     },
-    subtitle: {
-      fontSize: 15,
-      color: theme.isDark ? '#A7A7A7' : '#666',
+    introText: {
+      maxWidth: 700,
+      color: theme.text,
+      opacity: 0.62,
+      fontSize: desktopWeb ? 16 : 14,
+      lineHeight: desktopWeb ? 25 : 22,
+      marginTop: 12,
     },
 
     heroSection: {
-      paddingHorizontal: 18,
-      marginTop: 14,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      marginTop: desktopWeb ? 42 : 22,
     },
     heroCard: {
-      borderRadius: 28,
-      backgroundColor: theme.card,
+      borderRadius: 6,
+      backgroundColor: '#080709',
       borderWidth: 1,
-      borderColor: theme.border,
-      padding: 20,
+      borderColor: '#2A1E34',
+      padding: desktopWeb ? 42 : 22,
     },
     heroTopRow: {
       flexDirection: 'row',
@@ -626,10 +600,10 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       marginBottom: 16,
     },
     heroBadge: {
-      backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
+      backgroundColor: '#201526',
       paddingHorizontal: 12,
       paddingVertical: 7,
-      borderRadius: 999,
+      borderRadius: 3,
     },
     heroBadgeText: {
       color: theme.accent,
@@ -639,56 +613,31 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     heroIconWrap: {
       width: 44,
       height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.isDark ? '#1F1B27' : '#F7F2FF',
+      borderRadius: 4,
+      backgroundColor: '#171219',
       alignItems: 'center',
       justifyContent: 'center',
     },
     heroTitle: {
-      color: theme.text,
-      fontSize: 25,
-      lineHeight: 31,
-      fontWeight: '700',
+      color: '#FFFFFF',
+      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
+      fontSize: desktopWeb ? 38 : 27,
+      lineHeight: desktopWeb ? 45 : 34,
       marginBottom: 10,
     },
     heroSubtitle: {
-      color: theme.isDark ? '#B0B0B0' : '#5E5966',
-      fontSize: 14,
-      lineHeight: 22,
+      maxWidth: 680,
+      color: '#BDB6C2',
+      fontSize: desktopWeb ? 16 : 14,
+      lineHeight: desktopWeb ? 25 : 22,
       marginBottom: 18,
-    },
-    heroStatsRow: {
-      flexDirection: 'row',
-      gap: 10,
-      marginBottom: 18,
-      flexWrap: 'wrap',
-    },
-    heroStatPill: {
-      backgroundColor: theme.isDark ? '#23212A' : '#F5F1FA',
-      borderRadius: 16,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      minWidth: 78,
-    },
-    heroStatValue: {
-      color: theme.text,
-      fontSize: 18,
-      fontWeight: '700',
-      marginBottom: 2,
-    },
-    heroStatLabel: {
-      color: theme.isDark ? '#AFAFAF' : '#6A6570',
-      fontSize: 12,
-      fontWeight: '600',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
     },
     heroButton: {
       alignSelf: 'flex-start',
       backgroundColor: theme.accent,
       paddingHorizontal: 16,
       paddingVertical: 11,
-      borderRadius: 999,
+      borderRadius: 4,
     },
     heroButtonText: {
       color: '#FFFFFF',
@@ -700,19 +649,25 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       paddingHorizontal: 18,
       paddingRight: 6,
     },
+    desktopLotGrid: {
+      paddingHorizontal: 42,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 18,
+    },
 
     lotCard: {
-      width: Math.min(width * 0.62, 240),
+      width: desktopWeb ? '31.8%' : Math.min(viewportWidth * 0.72, 280),
       backgroundColor: theme.card,
-      borderRadius: 20,
-      marginRight: 16,
+      borderRadius: 6,
+      marginRight: desktopWeb ? 0 : 16,
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: theme.border,
     },
     lotImage: {
       width: '100%',
-      height: 190,
+      height: desktopWeb ? 280 : 220,
       backgroundColor: theme.card,
     },
     lotInfo: {
@@ -755,7 +710,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 3,
       marginBottom: 10,
     },
     statusBadgeLiveText: {
@@ -769,7 +724,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       backgroundColor: theme.isDark ? '#232831' : '#EEF3F7',
       paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 3,
       marginBottom: 10,
     },
     statusBadgeUpcomingText: {
@@ -782,8 +737,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       alignItems: 'center',
       paddingVertical: 54,
       paddingHorizontal: 34,
-      marginHorizontal: 18,
-      borderRadius: 24,
+      marginHorizontal: desktopWeb ? 42 : 18,
+      borderRadius: 6,
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
@@ -813,12 +768,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
 
     explainerGrid: {
-      paddingHorizontal: 18,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      flexDirection: desktopWeb ? 'row' : 'column',
       gap: 14,
     },
     explainerCard: {
+      width: desktopWeb ? '32%' : '100%',
       backgroundColor: theme.card,
-      borderRadius: 22,
+      borderRadius: 6,
       borderWidth: 1,
       borderColor: theme.border,
       padding: 16,
@@ -845,9 +802,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
 
     toolsPanel: {
-      marginHorizontal: 18,
+      marginHorizontal: desktopWeb ? 42 : 18,
       marginTop: 8,
-      borderRadius: 24,
+      borderRadius: 6,
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
@@ -868,12 +825,30 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     ctaButton: {
       backgroundColor: theme.accent,
       paddingVertical: 16,
-      borderRadius: 16,
+      borderRadius: 4,
       alignItems: 'center',
     },
     ctaText: {
       color: '#FFFFFF',
       fontSize: 16,
       fontWeight: '600',
+    },
+    sectionHeader: {
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingTop: desktopWeb ? 52 : 34,
+      paddingBottom: desktopWeb ? 20 : 14,
+    },
+    sectionEyebrow: {
+      color: theme.accent,
+      fontSize: 10,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      marginBottom: 7,
+    },
+    sectionTitle: {
+      color: theme.text,
+      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
+      fontSize: desktopWeb ? 33 : 24,
+      lineHeight: desktopWeb ? 39 : 30,
     },
   });

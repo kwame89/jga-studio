@@ -126,10 +126,7 @@ export default function CollectionDetail() {
         <View style={styles.statement}>
           <View style={styles.metaRow}>
             <Text style={styles.meta}>{formatCollectionYears(collection)}</Text>
-            <Text style={styles.meta}>
-              {collection.artworks.length} work
-              {collection.artworks.length === 1 ? '' : 's'}
-            </Text>
+            <Text style={styles.meta}>Studio collection</Text>
           </View>
           <Text style={styles.title}>{collection.title}</Text>
           {collection.description ? (

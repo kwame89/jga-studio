@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
   ScrollView,
   Share,
 } from 'react-native';
@@ -20,6 +19,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
+import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -43,6 +43,7 @@ type Artwork = {
   is_auction: boolean | null;
   auction_end_time: string | null;
   provenance_url: string | null;
+  provenance_events: ProvenanceEvent[] | null;
 };
 
 type WishlistItem = {
@@ -395,23 +396,7 @@ useEffect(() => {
           {artwork.signed && <Text style={styles.metaText}>Signature: {artwork.signed}</Text>}
         </View>
 
-        {artwork.provenance_url && (
-          <TouchableOpacity
-            style={styles.provenance}
-            onPress={() => Linking.openURL(artwork.provenance_url!)}
-            accessibilityRole="link"
-          >
-            <Ionicons name="document-text-outline" size={20} color={theme.accent} />
-            <View style={styles.provenanceTextWrap}>
-              <Text style={styles.provenanceTitle}>View provenance record</Text>
-              <Text style={styles.provenanceText}>
-                Artist-maintained history of this work — creation, exhibitions, and ownership —
-                on Archive Atlas.
-              </Text>
-            </View>
-            <Ionicons name="open-outline" size={18} color={theme.accent} />
-          </TouchableOpacity>
-        )}
+        <ProvenanceRecord events={artwork.provenance_events} />
 
         <View style={styles.shipping}>
           <Text style={styles.shippingTitle}>Estimated Shipping (Domestic US)</Text>
@@ -585,32 +570,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       lineHeight: 26,
       color: theme.text,
       marginBottom: 4,
-    },
-    provenance: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.border,
-      padding: 18,
-      borderRadius: 6,
-      marginBottom: 20,
-    },
-    provenanceTextWrap: {
-      flex: 1,
-    },
-    provenanceTitle: {
-      fontWeight: '700',
-      color: theme.accent,
-      fontSize: 16,
-      marginBottom: 4,
-    },
-    provenanceText: {
-      color: theme.text,
-      opacity: 0.7,
-      fontSize: 13,
-      lineHeight: 19,
     },
     shipping: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F3EAFB',

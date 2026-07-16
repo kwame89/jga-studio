@@ -149,6 +149,27 @@ interface PushedImage {
   alt_text: string | null;
 }
 
+interface PushedProvenanceEvent {
+  id: string;
+  type: string;
+  label: string;
+  occurred_at: string;
+  actor_name: string | null;
+  from_party_name: string | null;
+  to_party_name: string | null;
+  price: number | null;
+  currency: string | null;
+  notes: string | null;
+  exhibition_title: string | null;
+  exhibition_venue: string | null;
+  exhibition_location: string | null;
+  exhibition_end_date: string | null;
+  condition_rating: string | null;
+  proof_kind: "signed" | "corroborated" | "anchored" | "recorded";
+  proof_label: string;
+  anchor_hash: string | null;
+}
+
 interface PushedArtwork {
   atlas_artwork_id: string;
   root_artist_id: string;
@@ -163,6 +184,7 @@ interface PushedArtwork {
   art_type: string | null;
   subject_matter: string | null;
   provenance_url: string;
+  provenance_events: PushedProvenanceEvent[];
   images: PushedImage[];
 }
 
@@ -302,6 +324,9 @@ async function importOne(supabase: any, item: PushedArtwork) {
     art_type: item.art_type,
     subject_matter: item.subject_matter,
     provenance_url: item.provenance_url,
+    provenance_events: Array.isArray(item.provenance_events)
+      ? item.provenance_events.slice(0, 100)
+      : [],
     atlas_synced_at: new Date().toISOString(),
   };
 
