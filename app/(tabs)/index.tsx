@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -101,7 +102,9 @@ function artworkMatchesSearch(artwork: ArtPiece, query: string) {
 export default function Home() {
   const router = useRouter();
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const { width } = useWindowDimensions();
+  const desktopWeb = Platform.OS === 'web' && width >= 960;
+  const styles = createStyles(theme, desktopWeb);
   const [artworks, setArtworks] = useState<ArtPiece[]>([]);
   const [collections, setCollections] = useState<StudioCollection[]>([]);
   const [auctionLots, setAuctionLots] = useState<AuctionLotRow[]>([]);
@@ -321,6 +324,7 @@ export default function Home() {
             />
           </View>
           <ScrollView
+            style={styles.priceFilterScroll}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.priceFilters}
@@ -368,12 +372,10 @@ export default function Home() {
               onAction={() => router.push('/discover')}
               styles={styles}
             />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rail}
+            <ResponsiveRail
+              desktop={desktopWeb}
+              styles={styles}
               snapToInterval={CATEGORY_CARD_WIDTH + 12}
-              decelerationRate="fast"
             >
               {categorySummaries.map((category) => (
                 <TouchableOpacity
@@ -415,7 +417,7 @@ export default function Home() {
                   </View>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </ResponsiveRail>
 
             <SectionHeader
               eyebrow="Recently published"
@@ -425,12 +427,10 @@ export default function Home() {
               styles={styles}
             />
             {newWorks.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.rail}
+              <ResponsiveRail
+                desktop={desktopWeb}
+                styles={styles}
                 snapToInterval={ARTWORK_CARD_WIDTH + 12}
-                decelerationRate="fast"
               >
                 {newWorks.map((artwork) => (
                   <ArtworkRailCard
@@ -439,7 +439,7 @@ export default function Home() {
                     styles={styles}
                   />
                 ))}
-              </ScrollView>
+              </ResponsiveRail>
             ) : (
               <Text style={styles.emptyText}>
                 No works match the current search and price filters.
@@ -455,12 +455,10 @@ export default function Home() {
                   onAction={() => router.push('/discover')}
                   styles={styles}
                 />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.rail}
+                <ResponsiveRail
+                  desktop={desktopWeb}
+                  styles={styles}
                   snapToInterval={COLLECTION_CARD_WIDTH + 12}
-                  decelerationRate="fast"
                 >
                   {collections.slice(0, 6).map((collection) => (
                     <Link
@@ -493,7 +491,7 @@ export default function Home() {
                       </TouchableOpacity>
                     </Link>
                   ))}
-                </ScrollView>
+                </ResponsiveRail>
               </>
             ) : null}
 
@@ -506,12 +504,10 @@ export default function Home() {
                   onAction={() => router.push('/auctions')}
                   styles={styles}
                 />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.rail}
+                <ResponsiveRail
+                  desktop={desktopWeb}
+                  styles={styles}
                   snapToInterval={AUCTION_CARD_WIDTH + 12}
-                  decelerationRate="fast"
                 >
                   {auctionCards.map((lot) => (
                     <Link
@@ -545,7 +541,7 @@ export default function Home() {
                       </TouchableOpacity>
                     </Link>
                   ))}
-                </ScrollView>
+                </ResponsiveRail>
               </>
             ) : null}
 
@@ -566,6 +562,34 @@ export default function Home() {
           </>
         )}
       </View>
+    </ScrollView>
+  );
+}
+
+function ResponsiveRail({
+  children,
+  desktop,
+  snapToInterval,
+  styles,
+}: {
+  children: React.ReactNode;
+  desktop: boolean;
+  snapToInterval: number;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  if (desktop) {
+    return <View style={[styles.rail, styles.desktopRail]}>{children}</View>;
+  }
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.rail}
+      snapToInterval={snapToInterval}
+      decelerationRate="fast"
+    >
+      {children}
     </ScrollView>
   );
 }
@@ -651,7 +675,10 @@ function SectionHeader({
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>) =>
+const createStyles = (
+  theme: ReturnType<typeof useTheme>,
+  desktopWeb = false,
+) =>
   StyleSheet.create({
     screen: {
       flex: 1,
@@ -659,19 +686,19 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     screenContent: {
       alignItems: 'center',
-      paddingBottom: 106,
+      paddingBottom: desktopWeb ? 0 : 106,
     },
     shell: {
       width: '100%',
-      maxWidth: 760,
+      maxWidth: desktopWeb ? 1320 : 760,
       overflow: 'hidden',
       backgroundColor: theme.background,
     },
     masthead: {
-      minHeight: Platform.OS === 'ios' ? 116 : 84,
-      paddingTop: Platform.OS === 'ios' ? 52 : 20,
-      paddingHorizontal: 18,
-      paddingBottom: 12,
+      minHeight: desktopWeb ? 104 : Platform.OS === 'ios' ? 134 : 102,
+      paddingTop: desktopWeb ? 16 : Platform.OS === 'ios' ? 52 : 16,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingBottom: desktopWeb ? 16 : 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -689,11 +716,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       borderRadius: 6,
     },
     hero: {
+      flexDirection: desktopWeb ? 'row' : 'column',
       backgroundColor: '#080709',
     },
     heroImageFrame: {
-      width: '100%',
-      aspectRatio: 0.94,
+      width: desktopWeb ? '68%' : '100%',
+      aspectRatio: desktopWeb ? 1.3 : 0.94,
       position: 'relative',
       backgroundColor: '#111013',
     },
@@ -722,11 +750,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       letterSpacing: 0,
     },
     heroCaption: {
-      minHeight: 138,
-      paddingHorizontal: 18,
-      paddingVertical: 20,
+      width: desktopWeb ? '32%' : '100%',
+      minHeight: desktopWeb ? 0 : 138,
+      paddingHorizontal: desktopWeb ? 36 : 18,
+      paddingVertical: desktopWeb ? 38 : 20,
       flexDirection: 'row',
-      alignItems: 'flex-end',
+      alignItems: desktopWeb ? 'center' : 'flex-end',
       justifyContent: 'space-between',
       gap: 18,
       backgroundColor: '#080709',
@@ -746,8 +775,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     heroTitle: {
       color: '#FFFFFF',
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 31,
-      lineHeight: 36,
+      fontSize: desktopWeb ? 42 : 31,
+      lineHeight: desktopWeb ? 48 : 36,
       marginBottom: 7,
     },
     heroMeta: {
@@ -777,14 +806,19 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontSize: 23,
     },
     searchSection: {
-      paddingTop: 18,
-      paddingBottom: 8,
+      paddingTop: desktopWeb ? 20 : 18,
+      paddingBottom: desktopWeb ? 20 : 8,
+      paddingHorizontal: desktopWeb ? 42 : 0,
+      flexDirection: desktopWeb ? 'row' : 'column',
+      alignItems: desktopWeb ? 'center' : undefined,
+      gap: desktopWeb ? 18 : 0,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
     searchInputWrap: {
       height: 48,
-      marginHorizontal: 18,
+      width: desktopWeb ? 430 : undefined,
+      marginHorizontal: desktopWeb ? 0 : 18,
       paddingHorizontal: 13,
       flexDirection: 'row',
       alignItems: 'center',
@@ -801,10 +835,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontSize: 14,
     },
     priceFilters: {
-      paddingHorizontal: 18,
-      paddingTop: 10,
-      paddingBottom: 8,
+      paddingHorizontal: desktopWeb ? 0 : 18,
+      paddingTop: desktopWeb ? 0 : 10,
+      paddingBottom: desktopWeb ? 0 : 8,
       gap: 7,
+    },
+    priceFilterScroll: {
+      minWidth: 0,
+      flex: desktopWeb ? 1 : 0,
     },
     priceFilter: {
       minHeight: 34,
@@ -852,10 +890,10 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       textAlign: 'center',
     },
     sectionHeader: {
-      minHeight: 94,
-      paddingHorizontal: 18,
-      paddingTop: 28,
-      paddingBottom: 14,
+      minHeight: desktopWeb ? 124 : 94,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingTop: desktopWeb ? 48 : 28,
+      paddingBottom: desktopWeb ? 18 : 14,
       flexDirection: 'row',
       alignItems: 'flex-end',
       justifyContent: 'space-between',
@@ -872,8 +910,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     sectionTitle: {
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 24,
-      lineHeight: 29,
+      fontSize: desktopWeb ? 32 : 24,
+      lineHeight: desktopWeb ? 38 : 29,
     },
     sectionAction: {
       minHeight: 34,
@@ -888,11 +926,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontWeight: '700',
     },
     rail: {
-      paddingHorizontal: 18,
+      paddingHorizontal: desktopWeb ? 42 : 18,
       gap: 12,
     },
+    desktopRail: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'flex-start',
+      rowGap: 34,
+    },
     categoryCard: {
-      width: CATEGORY_CARD_WIDTH,
+      width: desktopWeb ? '32.6%' : CATEGORY_CARD_WIDTH,
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
@@ -942,7 +986,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       lineHeight: 16,
     },
     artworkCard: {
-      width: ARTWORK_CARD_WIDTH,
+      width: desktopWeb ? '24%' : ARTWORK_CARD_WIDTH,
     },
     artworkImageFrame: {
       width: '100%',
@@ -1011,7 +1055,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontWeight: '800',
     },
     collectionCard: {
-      width: COLLECTION_CARD_WIDTH,
+      width: desktopWeb ? '32.6%' : COLLECTION_CARD_WIDTH,
     },
     collectionImageFrame: {
       width: '100%',
@@ -1041,7 +1085,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       lineHeight: 24,
     },
     auctionCard: {
-      width: AUCTION_CARD_WIDTH,
+      width: desktopWeb ? '24%' : AUCTION_CARD_WIDTH,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 6,
@@ -1087,22 +1131,25 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     artistFeature: {
       minHeight: 310,
-      marginTop: 42,
-      flexDirection: viewportWidth >= 580 ? 'row' : 'column',
+      marginTop: desktopWeb ? 72 : 42,
+      flexDirection:
+        desktopWeb || viewportWidth >= 580 ? 'row' : 'column',
       backgroundColor: '#080709',
       borderTopWidth: 1,
       borderTopColor: '#2A1E34',
     },
     artistImage: {
-      width: viewportWidth >= 580 ? '42%' : '100%',
-      aspectRatio: viewportWidth >= 580 ? 0.86 : 1.45,
+      width:
+        desktopWeb || viewportWidth >= 580 ? '42%' : '100%',
+      aspectRatio:
+        desktopWeb || viewportWidth >= 580 ? 1.15 : 1.45,
       resizeMode: 'cover',
     },
     artistCopy: {
       minWidth: 0,
       flex: 1,
       justifyContent: 'center',
-      padding: 24,
+      padding: desktopWeb ? 56 : 24,
     },
     artistEyebrow: {
       color: '#B866FF',
@@ -1115,13 +1162,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     artistTitle: {
       color: '#FFFFFF',
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 27,
+      fontSize: desktopWeb ? 42 : 27,
       marginBottom: 11,
     },
     artistText: {
       color: '#C3BDC7',
-      fontSize: 12,
-      lineHeight: 19,
+      fontSize: desktopWeb ? 15 : 12,
+      lineHeight: desktopWeb ? 24 : 19,
       marginBottom: 13,
     },
     artistTagline: {

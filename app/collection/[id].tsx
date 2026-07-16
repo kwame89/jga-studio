@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,9 @@ import {
 export default function CollectionDetail() {
   const router = useRouter();
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const { width } = useWindowDimensions();
+  const desktopWeb = Platform.OS === 'web' && width >= 960;
+  const styles = createStyles(theme, desktopWeb);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const collectionId = typeof id === 'string' ? id : '';
   const [collection, setCollection] = useState<StudioCollection | null>(null);
@@ -106,31 +109,33 @@ export default function CollectionDetail() {
         <View style={styles.iconButtonSpacer} />
       </View>
 
-      <View style={styles.hero}>
-        {collection.cover?.image_url ? (
-          <Image
-            source={{ uri: collection.cover.image_url }}
-            style={styles.heroImage}
-          />
-        ) : (
-          <View style={styles.heroPlaceholder}>
-            <Ionicons name="image-outline" size={32} color={theme.accent} />
-          </View>
-        )}
-      </View>
-
-      <View style={styles.statement}>
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>{formatCollectionYears(collection)}</Text>
-          <Text style={styles.meta}>
-            {collection.artworks.length} work
-            {collection.artworks.length === 1 ? '' : 's'}
-          </Text>
+      <View style={styles.heroStory}>
+        <View style={styles.hero}>
+          {collection.cover?.image_url ? (
+            <Image
+              source={{ uri: collection.cover.image_url }}
+              style={styles.heroImage}
+            />
+          ) : (
+            <View style={styles.heroPlaceholder}>
+              <Ionicons name="image-outline" size={32} color={theme.accent} />
+            </View>
+          )}
         </View>
-        <Text style={styles.title}>{collection.title}</Text>
-        {collection.description ? (
-          <Text style={styles.description}>{collection.description}</Text>
-        ) : null}
+
+        <View style={styles.statement}>
+          <View style={styles.metaRow}>
+            <Text style={styles.meta}>{formatCollectionYears(collection)}</Text>
+            <Text style={styles.meta}>
+              {collection.artworks.length} work
+              {collection.artworks.length === 1 ? '' : 's'}
+            </Text>
+          </View>
+          <Text style={styles.title}>{collection.title}</Text>
+          {collection.description ? (
+            <Text style={styles.description}>{collection.description}</Text>
+          ) : null}
+        </View>
       </View>
 
       <View style={styles.worksHeading}>
@@ -180,7 +185,10 @@ export default function CollectionDetail() {
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>) =>
+const createStyles = (
+  theme: ReturnType<typeof useTheme>,
+  desktopWeb = false,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -188,7 +196,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     content: {
       width: '100%',
-      maxWidth: 760,
+      maxWidth: desktopWeb ? 1200 : 760,
       alignSelf: 'center',
       paddingBottom: 72,
     },
@@ -251,9 +259,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       height: 40,
     },
     hero: {
-      width: '100%',
-      aspectRatio: 1.06,
+      width: desktopWeb ? '62%' : '100%',
+      aspectRatio: desktopWeb ? 1.18 : 1.06,
       backgroundColor: theme.card,
+    },
+    heroStory: {
+      flexDirection: desktopWeb ? 'row' : 'column',
+      backgroundColor: theme.background,
     },
     heroImage: {
       width: '100%',
@@ -266,9 +278,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       justifyContent: 'center',
     },
     statement: {
-      paddingHorizontal: 18,
-      paddingTop: 24,
-      paddingBottom: 30,
+      minWidth: 0,
+      flex: desktopWeb ? 1 : 0,
+      justifyContent: desktopWeb ? 'center' : undefined,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingTop: desktopWeb ? 42 : 24,
+      paddingBottom: desktopWeb ? 42 : 30,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
@@ -288,8 +303,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     title: {
       color: theme.text,
       fontFamily: 'serif',
-      fontSize: 34,
-      lineHeight: 40,
+      fontSize: desktopWeb ? 46 : 34,
+      lineHeight: desktopWeb ? 53 : 40,
     },
     description: {
       color: theme.text,
@@ -299,9 +314,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       marginTop: 14,
     },
     worksHeading: {
-      paddingHorizontal: 18,
-      paddingTop: 30,
-      paddingBottom: 16,
+      paddingHorizontal: desktopWeb ? 36 : 18,
+      paddingTop: desktopWeb ? 48 : 30,
+      paddingBottom: desktopWeb ? 22 : 16,
     },
     worksEyebrow: {
       color: '#3E7569',
@@ -313,17 +328,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     worksTitle: {
       color: theme.text,
       fontFamily: 'serif',
-      fontSize: 23,
+      fontSize: desktopWeb ? 32 : 23,
     },
     grid: {
-      paddingHorizontal: 18,
+      paddingHorizontal: desktopWeb ? 36 : 18,
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      rowGap: 24,
+      rowGap: desktopWeb ? 38 : 24,
     },
     card: {
-      width: '48.3%',
+      width: desktopWeb ? '23.5%' : '48.3%',
       minWidth: 0,
     },
     imageFrame: {

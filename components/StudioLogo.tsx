@@ -10,8 +10,8 @@ export function StudioLogo({ compact = false }: { compact?: boolean }) {
     >
       <Image
         source={require('../assets/jga-studio-logo.png')}
-        style={[styles.image, compact && styles.imageCompact]}
-        resizeMode="contain"
+        style={styles.image}
+        resizeMode="cover"
       />
     </View>
   );
@@ -19,26 +19,16 @@ export function StudioLogo({ compact = false }: { compact?: boolean }) {
 
 const styles = StyleSheet.create({
   viewport: {
-    width: 114,
-    height: 52,
-    position: 'relative',
+    width: 140,
+    height: 70,
     overflow: 'hidden',
   },
   image: {
-    width: 132,
-    height: 132,
-    position: 'absolute',
-    top: -36,
-    left: -9,
+    width: '100%',
+    height: '100%',
   },
   viewportCompact: {
-    width: 92,
-    height: 42,
-  },
-  imageCompact: {
-    width: 108,
-    height: 108,
-    top: -29,
-    left: -8,
+    width: 112,
+    height: 56,
   },
 });

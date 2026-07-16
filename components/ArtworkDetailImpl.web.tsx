@@ -8,6 +8,7 @@ import {
   Linking,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../supabaseClient';
@@ -37,6 +38,8 @@ export default function ArtworkDetailImpl() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const desktopWeb = width >= 960;
 
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +108,10 @@ export default function ArtworkDetailImpl() {
   return (
     <ScrollView
       style={[styles.screen, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        desktopWeb && styles.contentDesktop,
+      ]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.brandHeader}>
@@ -116,10 +122,25 @@ export default function ArtworkDetailImpl() {
         <Text style={[styles.backText, { color: theme.accent }]}>Back</Text>
       </TouchableOpacity>
 
-      <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <Image source={{ uri: artwork.image_url }} style={styles.image} resizeMode="contain" />
+      <View
+        style={[
+          styles.card,
+          desktopWeb && styles.cardDesktop,
+          { backgroundColor: theme.card, borderColor: theme.border },
+        ]}
+      >
+        <Image
+          source={{ uri: artwork.image_url }}
+          style={[styles.image, desktopWeb && styles.imageDesktop]}
+          resizeMode="contain"
+        />
 
-        <View style={styles.metaSection}>
+        <View
+          style={[
+            styles.metaSection,
+            desktopWeb && styles.metaSectionDesktop,
+          ]}
+        >
           {!!studioCategory && (
             <Text style={[styles.eyebrow, { color: theme.accent }]}>
               {studioCategory.label}
@@ -192,6 +213,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingBottom: 80,
   },
+  contentDesktop: {
+    maxWidth: 1180,
+  },
   brandHeader: {
     minHeight: 70,
     justifyContent: 'center',
@@ -213,12 +237,25 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     marginBottom: 18,
   },
+  cardDesktop: {
+    flexDirection: 'row',
+  },
   image: {
     width: '100%',
     height: 420,
   },
+  imageDesktop: {
+    width: '62%',
+    height: 680,
+  },
   metaSection: {
     padding: 20,
+  },
+  metaSectionDesktop: {
+    minWidth: 0,
+    flex: 1,
+    justifyContent: 'center',
+    padding: 38,
   },
   eyebrow: {
     fontSize: 12,

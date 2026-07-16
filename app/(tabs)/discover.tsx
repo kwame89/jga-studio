@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +48,9 @@ function artworkMatchesSearch(artwork: StudioArtwork, query: string) {
 
 export default function Discover() {
   const theme = useTheme();
-  const styles = createStyles(theme);
+  const { width } = useWindowDimensions();
+  const desktopWeb = Platform.OS === 'web' && width >= 960;
+  const styles = createStyles(theme, desktopWeb);
   const params = useLocalSearchParams<{ category?: string | string[] }>();
   const [collections, setCollections] = useState<StudioCollection[]>([]);
   const [artworks, setArtworks] = useState<StudioArtwork[]>([]);
@@ -121,7 +124,7 @@ export default function Discover() {
     >
       <View style={styles.shell}>
         <View style={styles.masthead}>
-          <StudioLogo compact />
+          <StudioLogo compact={!desktopWeb} />
           <View style={styles.mastheadCopy}>
             <Text style={styles.mastheadEyebrow}>The catalog</Text>
             <Text style={styles.mastheadTitle}>Discover</Text>
@@ -153,6 +156,7 @@ export default function Discover() {
           </View>
 
           <ScrollView
+            style={styles.categoryFilterScroll}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryFilters}
@@ -415,7 +419,10 @@ function ArtworkCard({
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>) =>
+const createStyles = (
+  theme: ReturnType<typeof useTheme>,
+  desktopWeb = false,
+) =>
   StyleSheet.create({
     screen: {
       flex: 1,
@@ -423,19 +430,19 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     screenContent: {
       alignItems: 'center',
-      paddingBottom: 106,
+      paddingBottom: desktopWeb ? 64 : 106,
     },
     shell: {
       width: '100%',
-      maxWidth: 760,
+      maxWidth: desktopWeb ? 1320 : 760,
       overflow: 'hidden',
       backgroundColor: theme.background,
     },
     masthead: {
-      minHeight: Platform.OS === 'ios' ? 116 : 84,
-      paddingTop: Platform.OS === 'ios' ? 52 : 20,
-      paddingHorizontal: 18,
-      paddingBottom: 12,
+      minHeight: desktopWeb ? 104 : Platform.OS === 'ios' ? 120 : 94,
+      paddingTop: desktopWeb ? 16 : Platform.OS === 'ios' ? 52 : 14,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingBottom: desktopWeb ? 16 : 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -448,7 +455,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     mastheadEyebrow: {
       color: '#B866FF',
-      fontSize: 9,
+      fontSize: desktopWeb ? 11 : 9,
       fontWeight: '800',
       textTransform: 'uppercase',
       letterSpacing: 0,
@@ -456,40 +463,45 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     mastheadTitle: {
       color: '#FFFFFF',
-      fontSize: 21,
+      fontSize: desktopWeb ? 28 : 21,
       fontWeight: '800',
     },
     intro: {
-      paddingHorizontal: 18,
-      paddingTop: 30,
-      paddingBottom: 26,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingTop: desktopWeb ? 58 : 30,
+      paddingBottom: desktopWeb ? 48 : 26,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
     introTitle: {
-      maxWidth: 520,
+      maxWidth: desktopWeb ? 820 : 520,
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 32,
-      lineHeight: 38,
+      fontSize: desktopWeb ? 50 : 32,
+      lineHeight: desktopWeb ? 58 : 38,
       marginBottom: 10,
     },
     introText: {
-      maxWidth: 520,
+      maxWidth: desktopWeb ? 720 : 520,
       color: theme.text,
       opacity: 0.62,
-      fontSize: 13,
-      lineHeight: 20,
+      fontSize: desktopWeb ? 16 : 13,
+      lineHeight: desktopWeb ? 25 : 20,
     },
     filterBand: {
-      paddingTop: 16,
-      paddingBottom: 8,
+      paddingHorizontal: desktopWeb ? 42 : 0,
+      paddingTop: desktopWeb ? 20 : 16,
+      paddingBottom: desktopWeb ? 20 : 8,
+      flexDirection: desktopWeb ? 'row' : 'column',
+      alignItems: desktopWeb ? 'center' : undefined,
+      gap: desktopWeb ? 18 : 0,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
     searchInputWrap: {
       minHeight: 48,
-      marginHorizontal: 18,
+      width: desktopWeb ? 520 : undefined,
+      marginHorizontal: desktopWeb ? 0 : 18,
       paddingHorizontal: 13,
       flexDirection: 'row',
       alignItems: 'center',
@@ -506,10 +518,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontSize: 13,
     },
     categoryFilters: {
-      paddingHorizontal: 18,
-      paddingTop: 10,
-      paddingBottom: 8,
+      paddingHorizontal: desktopWeb ? 0 : 18,
+      paddingTop: desktopWeb ? 0 : 10,
+      paddingBottom: desktopWeb ? 0 : 8,
       gap: 7,
+    },
+    categoryFilterScroll: {
+      minWidth: 0,
+      flex: desktopWeb ? 1 : 0,
     },
     categoryFilter: {
       minHeight: 36,
@@ -559,10 +575,10 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       paddingTop: 10,
     },
     sectionHeading: {
-      minHeight: 100,
-      paddingHorizontal: 18,
-      paddingTop: 28,
-      paddingBottom: 15,
+      minHeight: desktopWeb ? 130 : 100,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingTop: desktopWeb ? 48 : 28,
+      paddingBottom: desktopWeb ? 20 : 15,
       flexDirection: 'row',
       alignItems: 'flex-end',
       justifyContent: 'space-between',
@@ -583,8 +599,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     sectionTitle: {
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 25,
-      lineHeight: 30,
+      fontSize: desktopWeb ? 34 : 25,
+      lineHeight: desktopWeb ? 40 : 30,
     },
     sectionDetail: {
       color: theme.text,
@@ -594,18 +610,22 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       paddingBottom: 3,
     },
     collectionList: {
+      paddingHorizontal: desktopWeb ? 42 : 0,
       borderTopWidth: 1,
       borderTopColor: theme.border,
     },
     collectionItem: {
-      paddingHorizontal: 18,
-      paddingVertical: 24,
+      paddingHorizontal: desktopWeb ? 0 : 18,
+      paddingVertical: desktopWeb ? 38 : 24,
+      flexDirection: desktopWeb ? 'row' : 'column',
+      alignItems: desktopWeb ? 'center' : undefined,
+      gap: desktopWeb ? 38 : 0,
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
     collectionCover: {
-      width: '100%',
-      aspectRatio: 1.18,
+      width: desktopWeb ? '52%' : '100%',
+      aspectRatio: desktopWeb ? 1.45 : 1.18,
       position: 'relative',
       overflow: 'hidden',
       backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
@@ -642,7 +662,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       letterSpacing: 0,
     },
     collectionCopy: {
-      paddingTop: 15,
+      minWidth: 0,
+      flex: desktopWeb ? 1 : 0,
+      paddingTop: desktopWeb ? 0 : 15,
     },
     collectionMetaRow: {
       flexDirection: 'row',
@@ -661,15 +683,15 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     collectionTitle: {
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 27,
-      lineHeight: 33,
+      fontSize: desktopWeb ? 38 : 27,
+      lineHeight: desktopWeb ? 45 : 33,
     },
     collectionDescription: {
       maxWidth: 620,
       color: theme.text,
       opacity: 0.62,
-      fontSize: 12,
-      lineHeight: 19,
+      fontSize: desktopWeb ? 15 : 12,
+      lineHeight: desktopWeb ? 24 : 19,
       marginTop: 9,
     },
     collectionAction: {
@@ -685,8 +707,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontWeight: '800',
     },
     categoryStatement: {
-      paddingHorizontal: 18,
-      paddingVertical: 28,
+      paddingHorizontal: desktopWeb ? 42 : 18,
+      paddingVertical: desktopWeb ? 48 : 28,
       backgroundColor: '#080709',
       borderBottomWidth: 1,
       borderBottomColor: '#2A1E34',
@@ -702,27 +724,27 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     categoryStatementTitle: {
       color: '#FFFFFF',
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 30,
+      fontSize: desktopWeb ? 42 : 30,
       marginBottom: 8,
     },
     categoryStatementText: {
-      maxWidth: 560,
+      maxWidth: desktopWeb ? 720 : 560,
       color: '#BFB9C3',
-      fontSize: 12,
-      lineHeight: 19,
+      fontSize: desktopWeb ? 15 : 12,
+      lineHeight: desktopWeb ? 24 : 19,
     },
     catalogSection: {
       paddingBottom: 26,
     },
     artworkGrid: {
-      paddingHorizontal: 18,
+      paddingHorizontal: desktopWeb ? 42 : 18,
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      rowGap: 28,
+      rowGap: desktopWeb ? 44 : 28,
     },
     artworkCard: {
-      width: '48%',
+      width: desktopWeb ? '23.6%' : '48%',
       minWidth: 0,
     },
     artworkImageFrame: {
@@ -749,15 +771,15 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       minHeight: 40,
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 16,
-      lineHeight: 19,
+      fontSize: desktopWeb ? 19 : 16,
+      lineHeight: desktopWeb ? 23 : 19,
     },
     artworkMeta: {
       minHeight: 30,
       color: theme.text,
       opacity: 0.5,
-      fontSize: 9,
-      lineHeight: 14,
+      fontSize: desktopWeb ? 11 : 9,
+      lineHeight: desktopWeb ? 17 : 14,
       marginTop: 5,
     },
     artworkPrice: {
