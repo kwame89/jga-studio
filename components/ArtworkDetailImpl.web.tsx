@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Linking,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -22,6 +23,7 @@ type Artwork = {
   medium?: string;
   collection_type?: string;
   created_at?: string;
+  provenance_url?: string | null;
 };
 
 export default function ArtworkDetailImpl() {
@@ -38,10 +40,12 @@ export default function ArtworkDetailImpl() {
 
   const fetchArtwork = async () => {
     try {
+      // Atlas-backed pieces only (docs/09) — legacy rows resolve to not-found.
       const { data, error } = await supabase
         .from('art_pieces')
         .select('*')
         .eq('id', id)
+        .not('atlas_artwork_id', 'is', null)
         .single();
 
       if (error) {
@@ -135,6 +139,22 @@ export default function ArtworkDetailImpl() {
               {artwork.description}
             </Text>
           )}
+
+          {!!artwork.provenance_url && (
+            <TouchableOpacity
+              style={[styles.provenance, { borderColor: theme.border }]}
+              onPress={() => Linking.openURL(artwork.provenance_url!)}
+              accessibilityRole="link"
+            >
+              <Text style={[styles.provenanceTitle, { color: theme.accent }]}>
+                View provenance record ↗
+              </Text>
+              <Text style={[styles.provenanceText, { color: theme.text }]}>
+                Artist-maintained history of this work — creation, exhibitions, and ownership —
+                on Archive Atlas.
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -222,6 +242,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 26,
     marginTop: 6,
+  },
+  provenance: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+  },
+  provenanceTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  provenanceText: {
+    fontSize: 13,
+    lineHeight: 20,
+    opacity: 0.7,
   },
   noticeCard: {
     borderRadius: 20,

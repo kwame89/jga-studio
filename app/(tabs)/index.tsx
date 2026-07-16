@@ -186,9 +186,12 @@ export default function Home() {
   }, []);
 
   const fetchData = async () => {
+    // Archive Atlas is the system of record for artwork (docs/09): only
+    // pieces pushed from Atlas appear in the app.
     const { data: artData, error: artError } = await supabase
       .from('art_pieces')
       .select('*')
+      .not('atlas_artwork_id', 'is', null)
       .order('created_at', { ascending: false });
 
     if (artError) {

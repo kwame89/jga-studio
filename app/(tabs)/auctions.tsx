@@ -186,9 +186,12 @@ export default function Auctions() {
 
     const artPieceIds = [...new Set(safeLots.map((lot) => lot.art_piece_id))];
 
+    // Only Atlas-backed pieces are shown (docs/09); lots on legacy pieces
+    // are dropped below when no piece matches.
     const { data: artPiecesData, error: artPiecesError } = await supabase
       .from('art_pieces')
       .select('id, title, image_url, medium, collection_type')
+      .not('atlas_artwork_id', 'is', null)
       .in('id', artPieceIds);
 
     if (artPiecesError) {
@@ -208,10 +211,12 @@ export default function Auctions() {
       artPieceMap.set(piece.id, piece);
     });
 
-    const mergedLots: AuctionLotMerged[] = safeLots.map((lot) => ({
-      ...lot,
-      art_piece: artPieceMap.get(lot.art_piece_id) || null,
-    }));
+    const mergedLots: AuctionLotMerged[] = safeLots
+      .map((lot) => ({
+        ...lot,
+        art_piece: artPieceMap.get(lot.art_piece_id) || null,
+      }))
+      .filter((lot) => lot.art_piece !== null);
 
     setLots(mergedLots);
     setLoading(false);
