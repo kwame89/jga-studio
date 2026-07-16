@@ -23,8 +23,8 @@ import {
   usePrivy,
   useLoginWithEmail,
   useEmbeddedEthereumWallet,
-} from '@privy-io/expo';
-import { useCreateWallet } from '@privy-io/expo/extended-chains';
+  useCreateWallet,
+} from '../../lib/privy';
 import {
   createPublicClient,
   encodeFunctionData,

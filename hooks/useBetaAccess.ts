@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { usePrivy } from '@privy-io/expo';
+import { usePrivy } from '../lib/privy';
 import { supabase } from '../supabaseClient';
 
 export function useBetaAccess() {
