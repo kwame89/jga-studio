@@ -320,6 +320,10 @@ export default function Home() {
         <Text style={styles.tagline}>{STUDIO.tagline}</Text>
       </View>
 
+      <View style={styles.bioSection}>
+        <Text style={styles.bio}>{STUDIO.bio}</Text>
+      </View>
+
       <SectionHeader
         title="Artist Statement"
         subtitle={`In ${STUDIO.artistName.split(' ')[0]}’s own words`}
@@ -699,6 +703,15 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       marginTop: 8,
     },
 
+    bioSection: {
+      paddingHorizontal: 18,
+      marginTop: 14,
+    },
+    bio: {
+      color: theme.isDark ? '#A7A2B2' : '#5C5766',
+      fontSize: 15,
+      lineHeight: 23,
+    },
     aboutSection: {
       paddingHorizontal: 18,
     },

@@ -25,6 +25,18 @@ export const STUDIO = {
   // One-line positioning shown under the artist name at the top of Home.
   tagline: 'Paintings of dreams and visions — migration, heritage, and mythology.',
 
+  // Short third-person bio (the factual "who"), in Jay's own words.
+  bio:
+    'Jay Golding is a Jamaican-born descendant of the Accompong Maroons raised in the ' +
+    'U.S., more specifically, immigrating to New Jersey at the age of seven. Jay’s work ' +
+    'focuses primarily on realistic figurative portraits, typically set in landscaped and ' +
+    'natural settings. He often creates vibrant paintings and drawings that explore ' +
+    'indigenous cultures, mythology, and his personal migration story. Using acrylics, ' +
+    'oils, and occasionally collage or impasto, Golding infuses Caribbean and African ' +
+    'motifs to draw parallels between these communities. His transformative trips to ' +
+    'places like Ghana and Mexico have deeply influenced his layered, symbolic work. Jay ' +
+    'earned his BFA in Studio Art from Kean University in 2015.',
+
   // Artist statement, in Jay's own words. Each string is one paragraph.
   statement: [
     'My art is like painting dreams or visions onto the canvas. I pull inspiration ' +
