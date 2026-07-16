@@ -96,16 +96,19 @@ logs sales in Atlas manually**, as he would for any offline sale.
 | Automated sale writeback to Atlas | **Out** — §6, manual for now |
 | Atlas mainnet migration | Atlas's own decision, out of JGA scope |
 
-## 8. Implementation status & deployment (2026-07-15)
+## 8. Implementation status & deployment (2026-07-16)
 
-Both sides are implemented and pushed; deployment is the remaining step.
+The import and image-sync path is deployed. The catalog-control and
+profile-allowlist extension below must be deployed migration-first so neither
+frontend references a table or function that is not live yet.
 
 | Piece | Where |
 |---|---|
 | `atlas-import` receiver | `supabase/functions/atlas-import/index.ts` (this repo) |
 | Schema for it (Atlas columns, `art_images`, audit log, `artwork` bucket) | `supabase/migrations/20260715000000_atlas_import.sql` — written against the **live v1 schema** (bigint ids, `image_url`, `price_usd`), guarded so the beta 2 rebuild can run over it |
 | Draft visibility + atomic image reconciliation | `supabase/migrations/20260715010000_atlas_publication_and_image_reconcile.sql` — preserves currently visible Atlas works, keeps future imports unpublished, restricts public reads, and installs the transactional image-manifest RPC |
-| `push-to-jga` sender + UI | archive-atlas repo: `supabase/functions/push-to-jga/`, `src/components/PushToJgaButton.tsx` (JGA Studio panel on the artwork page, root-artist controllers only) |
+| `push-to-jga` sender + UI | archive-atlas repo: `supabase/functions/push-to-jga/`, `src/components/PushToJgaButton.tsx` (JGA Studio panel only for Jay's allowlisted root profile and its controller) |
+| Catalog publication + price controls | `supabase/functions/admin-catalog/`, `components/StudioCatalogManager.tsx`, `supabase/migrations/20260716000000_studio_catalog_admin.sql` |
 
 Deploy runbook:
 1. Generate the shared secret once: `openssl rand -hex 32`.
@@ -118,6 +121,19 @@ Deploy runbook:
    appears in JGA `art_pieces` (unpriced), images land in the `artwork`
    bucket, and an `admin_audit_log` row exists. Re-push and confirm images
    report `unchanged`.
+
+Catalog-control extension:
+1. **JGA project:** run
+   `supabase/migrations/20260716000000_studio_catalog_admin.sql`.
+2. Set JGA Edge Function secrets `PRIVY_APP_ID` (the same app id used by the
+   client) and `PRIVY_APP_SECRET` (server-only, from the Privy Dashboard).
+3. Deploy `admin-catalog` with JWT gateway verification disabled; the function
+   verifies Privy's token itself.
+4. **Atlas project:** run `supabase/migrations/0020_profile_integrations.sql`,
+   then redeploy `push-to-jga`.
+5. Deploy both frontends. Verify Jay sees the controls, a non-admin Privy
+   account does not, drafts remain absent from public catalog reads, and each
+   price/publication change creates an `admin_audit_log` row.
 
 v1-specific behaviors (superseded by the beta 2 rebuild): edition info is
 appended to the description (v1 has no edition columns); `image_url` is
@@ -138,6 +154,10 @@ starts with `published_at = null` and remains hidden until JGA publishes it.
 
 ## Changelog
 
+- v0.5 (2026-07-16) — Added Privy-token-verified catalog administration with
+  audited price, publish, and unpublish actions. Archive Atlas now uses a
+  server-managed profile integration allowlist, so only Jay's profile exposes
+  and may call the JGA push path.
 - v0.4 (2026-07-15) — Added explicit draft visibility and database-enforced
   public-read rules. Image manifests now validate fully before an atomic row
   reconciliation; failed replacements preserve the previous image set, primary

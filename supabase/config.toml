@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.atlas-import]
 verify_jwt = false
+
+[functions.admin-catalog]
+verify_jwt = false

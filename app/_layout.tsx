@@ -3,9 +3,9 @@ import 'react-native-get-random-values';
 
 import React from 'react';
 import { Stack } from 'expo-router';
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { PrivyProvider } from '@privy-io/expo';
 import { ThemeProvider } from '../themeContext';
+import PaymentProvider from '../components/PaymentProvider';
 import { useFonts } from 'expo-font';
 import {
   Inter_400Regular,
@@ -39,17 +39,14 @@ export default function RootLayout() {
         },
       }}
     >
-      <StripeProvider
-        publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''}
-        merchantIdentifier="merchant.com.jgastudio"
-      >
+      <PaymentProvider>
         <ThemeProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="artwork/[id]" />
           </Stack>
         </ThemeProvider>
-      </StripeProvider>
+      </PaymentProvider>
     </PrivyProvider>
   );
 }

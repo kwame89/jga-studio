@@ -36,6 +36,7 @@ import {
 import { base } from 'viem/chains';
 import { useTheme } from '../../themeContext';
 import { supabase } from '../../supabaseClient';
+import StudioCatalogManager from '../../components/StudioCatalogManager';
 
 type WishlistItem = {
   id: number;
@@ -318,7 +319,7 @@ export default function Profile() {
   const [txHistoryLoading, setTxHistoryLoading] = useState(false);
   const [txHistoryError, setTxHistoryError] = useState<string | null>(null);
 
-  const { user, logout, isReady } = usePrivy();
+  const { user, logout, isReady, getAccessToken } = usePrivy();
   const { sendCode, loginWithCode } = useLoginWithEmail();
   const { wallets } = useEmbeddedEthereumWallet();
   const { createWallet } = useCreateWallet();
@@ -327,7 +328,7 @@ export default function Profile() {
     user?.linked_accounts?.find((acc: any) => acc.type === 'email')?.address ??
     null;
 
-  const isAdmin = email === 'jgastudio2@gmail.com';
+  const [isAdmin, setIsAdmin] = useState(false);
   const isSignedIn = !!user;
   const walletAddress = wallets?.[0]?.address ?? null;
   const walletReady = !!walletAddress;
@@ -371,7 +372,7 @@ export default function Profile() {
         wallet_address: address,
         chain_type: 'ethereum',
         wallet_provider: 'privy',
-        is_admin: email === 'jgastudio2@gmail.com',
+        is_admin: false,
         display_name: email,
         last_seen_at: new Date().toISOString(),
       };
@@ -962,10 +963,6 @@ const handleQrScanned = ({ data }: { data: string }) => {
       console.error(error);
       Alert.alert('Unable to open link', 'Could not open BaseScan right now.');
     }
-  };
-
-  const handleAdminTools = () => {
-    Alert.alert('Admin Tools', 'Admin access enabled.');
   };
 
   const handleClaimRewards = async () => {
@@ -1622,23 +1619,11 @@ const handleQrScanned = ({ data }: { data: string }) => {
           </View>
         </Section>
 
-        {isAdmin && (
-          <Section title="Admin Panel">
-            <View style={styles.card}>
-              <View style={styles.row}>
-                <Ionicons name="shield-checkmark-outline" size={22} color={theme.accent} />
-                <Text style={styles.cardTitle}>Admin Access</Text>
-              </View>
-
-              <Text style={styles.cardText}>
-                Admin tools are enabled for {displayName}.
-              </Text>
-
-              <TouchableOpacity style={styles.primaryButton} onPress={handleAdminTools}>
-                <Text style={styles.primaryButtonText}>Open Admin Tools</Text>
-              </TouchableOpacity>
-            </View>
-          </Section>
+        {isSignedIn && (
+          <StudioCatalogManager
+            getAccessToken={getAccessToken}
+            onAuthorizationChange={setIsAdmin}
+          />
         )}
 
         <Section title="My Collection">

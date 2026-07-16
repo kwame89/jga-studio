@@ -61,6 +61,13 @@ too, which keeps exactly one auth path to audit.
 - The admin UI is the same app behind a route guard; the guard is
   convenience only — **enforcement lives in the Edge Functions.**
 
+**Live v1 bridge (2026-07-16):** until the beta 2 `collectors` and
+`user_roles` rebuild lands, catalog administration uses the server-only
+`studio_admins` allowlist keyed directly by Privy DID. The `admin-catalog`
+Edge Function verifies the Privy access token and checks that allowlist before
+calling the transactional catalog RPC. `collector_wallets.is_admin` and any
+client-visible email check are explicitly non-authoritative.
+
 ## 5. Which writes must go through Edge Functions
 
 **All of them, with one exception.**
@@ -109,6 +116,8 @@ that RLS cannot express. One write path = one place invariants live.
 
 ## Changelog
 
+- v0.3 (2026-07-16) — Documented the live v1 `studio_admins` authorization
+  bridge and removed client-side admin flags from the security boundary.
 - v0.2 (2026-07-15) — Added `atlas-import` (HMAC service auth) to the
   function inventory.
 - v0.1 (2026-07-15) — Initial draft.
