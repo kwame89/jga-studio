@@ -118,6 +118,7 @@ useEffect(() => {
       .select('*')
       .eq('id', id)
       .not('atlas_artwork_id', 'is', null)
+      .not('published_at', 'is', null)
       .single();
 
     if (error) {

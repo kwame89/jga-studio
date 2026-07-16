@@ -192,6 +192,7 @@ export default function Home() {
       .from('art_pieces')
       .select('*')
       .not('atlas_artwork_id', 'is', null)
+      .not('published_at', 'is', null)
       .order('created_at', { ascending: false });
 
     if (artError) {

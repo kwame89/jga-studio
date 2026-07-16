@@ -104,6 +104,7 @@ Both sides are implemented and pushed; deployment is the remaining step.
 |---|---|
 | `atlas-import` receiver | `supabase/functions/atlas-import/index.ts` (this repo) |
 | Schema for it (Atlas columns, `art_images`, audit log, `artwork` bucket) | `supabase/migrations/20260715000000_atlas_import.sql` — written against the **live v1 schema** (bigint ids, `image_url`, `price_usd`), guarded so the beta 2 rebuild can run over it |
+| Draft visibility + atomic image reconciliation | `supabase/migrations/20260715010000_atlas_publication_and_image_reconcile.sql` — preserves currently visible Atlas works, keeps future imports unpublished, restricts public reads, and installs the transactional image-manifest RPC |
 | `push-to-jga` sender + UI | archive-atlas repo: `supabase/functions/push-to-jga/`, `src/components/PushToJgaButton.tsx` (JGA Studio panel on the artwork page, root-artist controllers only) |
 
 Deploy runbook:
@@ -122,6 +123,8 @@ v1-specific behaviors (superseded by the beta 2 rebuild): edition info is
 appended to the description (v1 has no edition columns); `image_url` is
 kept pointed at the primary image copy so the current app renders it;
 `alt_text` falls back to the title (Atlas doesn't capture alt text yet).
+Existing Atlas-backed works are backfilled as published; each future import
+starts with `published_at = null` and remains hidden until JGA publishes it.
 
 ## 9. Open questions
 
@@ -135,6 +138,12 @@ kept pointed at the primary image copy so the current app renders it;
 
 ## Changelog
 
+- v0.4 (2026-07-15) — Added explicit draft visibility and database-enforced
+  public-read rules. Image manifests now validate fully before an atomic row
+  reconciliation; failed replacements preserve the previous image set, primary
+  changes cannot collide, removals clear `image_url`, and storage cleanup runs
+  only after the database commit. `atlas-import`'s HMAC-only gateway setting is
+  now persisted in `supabase/config.toml`.
 - v0.3 (2026-07-15) — **Deployed to both projects and verified live**:
   migration applied, all five secrets set, unsigned requests 401, signed
   request with a foreign root artist correctly rejected + audit-logged.

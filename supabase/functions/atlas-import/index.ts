@@ -19,7 +19,8 @@
 // Function secrets to set:
 //   ATLAS_SHARED_SECRET   — same value as JGA_PUSH_SHARED_SECRET on the Atlas side
 //   ATLAS_ROOT_ARTIST_ID  — Jay's Atlas profile uuid; the only accepted root artist
-// Deploy with --no-verify-jwt (the HMAC is the auth):
+// HMAC is the auth, so JWT verification is disabled in supabase/config.toml.
+// The flag is repeated here for safe one-off deployments:
 //   supabase functions deploy atlas-import --no-verify-jwt
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -163,6 +164,24 @@ interface PushedArtwork {
   images: PushedImage[];
 }
 
+interface ExistingImageRow {
+  id: string;
+  content_hash: string | null;
+  storage_path: string;
+  is_primary: boolean;
+  sort_order: number;
+}
+
+interface PreparedImage {
+  storage_path: string;
+  public_url: string;
+  source_url: string;
+  content_hash: string;
+  sort_order: number;
+  is_primary: boolean;
+  alt_text: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
   if (!ATLAS_SHARED_SECRET || !ATLAS_ROOT_ARTIST_ID) {
@@ -292,21 +311,33 @@ async function syncImages(supabase: any, pieceId: number, item: PushedArtwork) {
   const manifest = (item.images ?? []).slice(0, MAX_IMAGES_PER_ARTWORK);
   const results: { source_url: string; status: "copied" | "unchanged" | "rejected"; reason?: string }[] = [];
 
-  const { data: existingRows } = await supabase
+  const { data: existingData, error: existingError } = await supabase
     .from("art_images")
     .select("id, content_hash, storage_path, is_primary, sort_order")
     .eq("art_piece_id", pieceId);
-  const byHash = new Map((existingRows ?? []).map((r: { content_hash: string }) => [r.content_hash, r]));
-  const keptHashes = new Set<string>();
-  let primaryPublicUrl: string | null = null;
+  if (existingError) throw new Error(existingError.message);
+
+  const existingRows = (existingData ?? []) as ExistingImageRow[];
+  const byHash = new Map(
+    existingRows
+      .filter((row) => Boolean(row.content_hash))
+      .map((row) => [row.content_hash as string, row])
+  );
+  const prepared: PreparedImage[] = [];
+  const newlyUploadedPaths: string[] = [];
 
   for (const image of manifest) {
     try {
+      if (!image?.url) throw new Error("image URL is required");
       const response = await fetch(image.url);
       if (!response.ok) throw new Error(`fetch failed (${response.status})`);
       const contentType = response.headers.get("content-type") ?? "";
       if (!/image\/(jpeg|jpg|png|webp)/i.test(contentType)) {
         throw new Error(`unsupported content type: ${contentType || "unknown"}`);
+      }
+      const contentLength = Number(response.headers.get("content-length"));
+      if (Number.isFinite(contentLength) && contentLength > MAX_IMAGE_BYTES) {
+        throw new Error("image exceeds 25 MB");
       }
       const bytes = new Uint8Array(await response.arrayBuffer());
       if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error("image exceeds 25 MB");
@@ -321,28 +352,22 @@ async function syncImages(supabase: any, pieceId: number, item: PushedArtwork) {
       }
 
       const hash = await sha256Hex(bytes);
-      keptHashes.add(hash);
-      const existingRow = byHash.get(hash);
-      if (existingRow) {
-        await supabase
-          .from("art_images")
-          .update({ is_primary: image.is_primary, sort_order: image.sort_order, source_url: image.url })
-          .eq("id", existingRow.id);
-        if (image.is_primary) {
-          primaryPublicUrl = publicUrl(supabase, existingRow.storage_path);
-        }
-        results.push({ source_url: image.url, status: "unchanged" });
-        continue;
+      if (prepared.some((candidate) => candidate.content_hash === hash)) {
+        throw new Error("duplicate image content in manifest");
       }
 
-      const path = `art_pieces/${pieceId}/${hash}.${extensionFor(contentType)}`;
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, bytes, { contentType, upsert: true });
-      if (uploadError) throw new Error(uploadError.message);
+      const existingRow = byHash.get(hash);
+      const path = existingRow?.storage_path ?? `art_pieces/${pieceId}/${hash}.${extensionFor(contentType)}`;
 
-      const { error: insertError } = await supabase.from("art_images").insert({
-        art_piece_id: pieceId,
+      if (!existingRow) {
+        const { error: uploadError } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, bytes, { contentType, upsert: true });
+        if (uploadError) throw new Error(uploadError.message);
+        newlyUploadedPaths.push(path);
+      }
+
+      prepared.push({
         storage_path: path,
         public_url: publicUrl(supabase, path),
         source_url: image.url,
@@ -351,12 +376,9 @@ async function syncImages(supabase: any, pieceId: number, item: PushedArtwork) {
         is_primary: image.is_primary,
         alt_text: image.alt_text ?? item.title,
       });
-      if (insertError) throw new Error(insertError.message);
-
-      if (image.is_primary) primaryPublicUrl = publicUrl(supabase, path);
       results.push({
         source_url: image.url,
-        status: "copied",
+        status: existingRow ? "unchanged" : "copied",
         ...(dims ? {} : { reason: "dimensions unparseable; accepted without quality check" }),
       });
     } catch (err) {
@@ -368,20 +390,63 @@ async function syncImages(supabase: any, pieceId: number, item: PushedArtwork) {
     }
   }
 
-  // Rows whose content is no longer in the Atlas manifest are removed —
-  // Atlas is the source of truth for the image set (docs/09 §2).
-  const stale = (existingRows ?? []).filter(
-    (r: { content_hash: string }) => r.content_hash && !keptHashes.has(r.content_hash)
-  );
-  for (const row of stale) {
-    await supabase.from("art_images").delete().eq("id", row.id);
-    await supabase.storage.from(BUCKET).remove([row.storage_path]);
+  // A rejected fetch or quality check must never be interpreted as an Atlas
+  // deletion. Leave the current manifest untouched and remove only files this
+  // attempt uploaded before the failure was known.
+  if (results.some((result) => result.status === "rejected")) {
+    if (newlyUploadedPaths.length > 0) {
+      const { error: rollbackError } = await supabase.storage.from(BUCKET).remove(newlyUploadedPaths);
+      if (rollbackError) console.error("Could not roll back staged Atlas image objects", rollbackError);
+    }
+    return results.map((result) =>
+      result.status === "rejected"
+        ? result
+        : {
+            ...result,
+            status: "rejected" as const,
+            reason: "manifest not applied because another image was rejected",
+          }
+    );
   }
 
-  // v1 compatibility: the app renders art_pieces.image_url, so keep it
-  // pointed at the primary image's copy in our bucket.
-  if (primaryPublicUrl) {
-    await supabase.from("art_pieces").update({ image_url: primaryPublicUrl }).eq("id", pieceId);
+  const primaryImages = prepared.filter((image) => image.is_primary);
+  if (primaryImages.length > 1) {
+    if (newlyUploadedPaths.length > 0) {
+      await supabase.storage.from(BUCKET).remove(newlyUploadedPaths);
+    }
+    return results.map((result) => ({
+      ...result,
+      status: "rejected" as const,
+      reason: "manifest contains more than one primary image",
+    }));
+  }
+  if (prepared.length > 0 && primaryImages.length === 0) {
+    prepared[0].is_primary = true;
+  }
+
+  const keptHashes = new Set(prepared.map((image) => image.content_hash));
+  const stalePaths = existingRows
+    .filter((row) => !row.content_hash || !keptHashes.has(row.content_hash))
+    .map((row) => row.storage_path);
+  const primaryPublicUrl = prepared.find((image) => image.is_primary)?.public_url ?? null;
+
+  const { error: applyError } = await supabase.rpc("apply_atlas_image_manifest", {
+    p_art_piece_id: pieceId,
+    p_images: prepared,
+    p_primary_public_url: primaryPublicUrl,
+  });
+  if (applyError) {
+    if (newlyUploadedPaths.length > 0) {
+      await supabase.storage.from(BUCKET).remove(newlyUploadedPaths);
+    }
+    throw new Error(applyError.message);
+  }
+
+  // Database rows and image_url are already committed. Storage cleanup comes
+  // last, so a cleanup failure can only leave an orphan, never a broken page.
+  if (stalePaths.length > 0) {
+    const { error: cleanupError } = await supabase.storage.from(BUCKET).remove(stalePaths);
+    if (cleanupError) console.error("Could not remove stale Atlas image objects", cleanupError);
   }
 
   return results;

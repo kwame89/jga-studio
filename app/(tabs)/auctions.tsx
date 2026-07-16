@@ -192,6 +192,7 @@ export default function Auctions() {
       .from('art_pieces')
       .select('id, title, image_url, medium, collection_type')
       .not('atlas_artwork_id', 'is', null)
+      .not('published_at', 'is', null)
       .in('id', artPieceIds);
 
     if (artPiecesError) {
