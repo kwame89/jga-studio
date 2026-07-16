@@ -15,6 +15,12 @@ import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabaseClient';
 import { useTheme } from '../../themeContext';
+import {
+  STUDIO,
+  PRICE_TIERS,
+  priceInTier,
+  type PriceTierKey,
+} from '../../constants/studioContent';
 
 const { width } = Dimensions.get('window');
 
@@ -76,8 +82,6 @@ type AuctionCard = {
   timeLabel: string;
 };
 
-type PriceFilter = 'all' | 'under250' | '250to500' | '500to1000' | '1000plus';
-
 const CATEGORY_MAP: Record<string, string[]> = {
   Paintings: ['Paintings', 'Painting'],
   'Mixed Media': ['Mixed Media', 'mixed media', 'Mixed media'],
@@ -128,24 +132,6 @@ function isJustAdded(dateString?: string) {
   return hoursDiff <= 24;
 }
 
-function passesPriceFilter(item: ArtPiece, priceFilter: PriceFilter) {
-  const price = Number(item.price_usd || 0);
-
-  switch (priceFilter) {
-    case 'under250':
-      return price < 250;
-    case '250to500':
-      return price >= 250 && price <= 500;
-    case '500to1000':
-      return price > 500 && price <= 1000;
-    case '1000plus':
-      return price > 1000;
-    case 'all':
-    default:
-      return true;
-  }
-}
-
 function FilterChip({
   label,
   active,
@@ -179,7 +165,7 @@ export default function Home() {
   const [auctionLots, setAuctionLots] = useState<AuctionLotRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [heroIndex, setHeroIndex] = useState(0);
-  const [selectedPriceFilter, setSelectedPriceFilter] = useState<PriceFilter>('all');
+  const [selectedTier, setSelectedTier] = useState<PriceTierKey>('all');
 
   useEffect(() => {
     fetchData();
@@ -222,10 +208,10 @@ export default function Home() {
       result = result.filter((item) => item.title.toLowerCase().includes(q));
     }
 
-    result = result.filter((item) => passesPriceFilter(item, selectedPriceFilter));
+    result = result.filter((item) => priceInTier(item.price_usd, selectedTier));
 
     return result;
-  }, [artworks, searchQuery, selectedPriceFilter]);
+  }, [artworks, searchQuery, selectedTier]);
 
   const heroCandidates = useMemo(() => {
     let result = [...artworks];
@@ -320,7 +306,7 @@ export default function Home() {
         <Text style={styles.brand}>JGA STUDIO</Text>
 
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Collect the Studio</Text>
+          <Text style={styles.title}>{STUDIO.artistName}</Text>
 
           <TouchableOpacity
             style={styles.bellButton}
@@ -330,7 +316,48 @@ export default function Home() {
             <Ionicons name="notifications-outline" size={20} color={theme.text} />
           </TouchableOpacity>
         </View>
+
+        <Text style={styles.tagline}>{STUDIO.tagline}</Text>
       </View>
+
+      <View style={styles.aboutSection}>
+        <Text style={styles.statement}>{STUDIO.statement}</Text>
+        <Text style={styles.bio}>{STUDIO.bio}</Text>
+      </View>
+
+      <SectionHeader
+        title="The Work"
+        subtitle="Series across the studio, from illustration to experimental"
+        theme={theme}
+      />
+
+      <View style={styles.seriesList}>
+        {STUDIO.series.map((series) => (
+          <TouchableOpacity
+            key={series.key}
+            activeOpacity={0.9}
+            style={styles.seriesCard}
+            onPress={() =>
+              router.push({
+                pathname: '/discover',
+                params: { category: series.discoverCategory },
+              })
+            }
+          >
+            <View style={styles.seriesTextWrap}>
+              <Text style={styles.seriesTitle}>{series.title}</Text>
+              <Text style={styles.seriesBlurb}>{series.blurb}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.accent} />
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <SectionHeader
+        title="Available Now"
+        subtitle="Works from the studio you can collect today"
+        theme={theme}
+      />
 
       <View style={styles.searchWrap}>
         <View style={styles.searchInputWrap}>
@@ -356,36 +383,15 @@ export default function Home() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterRow}
       >
-        <FilterChip
-          label="All"
-          active={selectedPriceFilter === 'all'}
-          onPress={() => setSelectedPriceFilter('all')}
-          styles={styles}
-        />
-        <FilterChip
-          label="Under $250"
-          active={selectedPriceFilter === 'under250'}
-          onPress={() => setSelectedPriceFilter('under250')}
-          styles={styles}
-        />
-        <FilterChip
-          label="$250–$500"
-          active={selectedPriceFilter === '250to500'}
-          onPress={() => setSelectedPriceFilter('250to500')}
-          styles={styles}
-        />
-        <FilterChip
-          label="$500–$1,000"
-          active={selectedPriceFilter === '500to1000'}
-          onPress={() => setSelectedPriceFilter('500to1000')}
-          styles={styles}
-        />
-        <FilterChip
-          label="$1,000+"
-          active={selectedPriceFilter === '1000plus'}
-          onPress={() => setSelectedPriceFilter('1000plus')}
-          styles={styles}
-        />
+        {PRICE_TIERS.map((tier) => (
+          <FilterChip
+            key={tier.key}
+            label={tier.label}
+            active={selectedTier === tier.key}
+            onPress={() => setSelectedTier(tier.key)}
+            styles={styles}
+          />
+        ))}
       </ScrollView>
 
       {heroArtwork && (
@@ -673,6 +679,59 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontSize: 28,
       fontWeight: '700',
       flex: 1,
+    },
+    tagline: {
+      color: theme.isDark ? '#B7B0C4' : '#5C5766',
+      fontSize: 15,
+      lineHeight: 21,
+      marginTop: 8,
+    },
+
+    aboutSection: {
+      paddingHorizontal: 18,
+      marginTop: 14,
+    },
+    statement: {
+      color: theme.text,
+      fontSize: 18,
+      lineHeight: 27,
+      fontWeight: '600',
+      marginBottom: 12,
+    },
+    bio: {
+      color: theme.isDark ? '#A7A2B2' : '#5C5766',
+      fontSize: 15,
+      lineHeight: 23,
+    },
+
+    seriesList: {
+      paddingHorizontal: 18,
+      gap: 12,
+    },
+    seriesCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 18,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+    },
+    seriesTextWrap: {
+      flex: 1,
+      paddingRight: 12,
+    },
+    seriesTitle: {
+      color: theme.text,
+      fontSize: 17,
+      fontWeight: '700',
+      marginBottom: 4,
+    },
+    seriesBlurb: {
+      color: theme.isDark ? '#A2A2A2' : '#6E6A75',
+      fontSize: 13,
+      lineHeight: 19,
     },
     bellButton: {
       width: 40,
