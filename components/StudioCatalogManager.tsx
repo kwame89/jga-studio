@@ -23,10 +23,27 @@ type CatalogItem = {
   atlas_synced_at: string | null;
 };
 
+type CatalogCollection = {
+  id: string;
+  atlas_collection_id: string;
+  title: string;
+  description: string | null;
+  start_year: number | null;
+  end_year: number | null;
+  cover_art_piece_id: number | null;
+  cover_image_url: string | null;
+  artwork_count: number;
+  published_artwork_count: number;
+  published_at: string | null;
+  atlas_synced_at: string | null;
+};
+
 type CatalogResponse = {
   is_admin?: boolean;
   items?: CatalogItem[];
+  collections?: CatalogCollection[];
   item?: CatalogItem;
+  collection?: CatalogCollection;
   error?: string;
 };
 
@@ -43,9 +60,11 @@ export default function StudioCatalogManager({
   const styles = createStyles(theme);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [items, setItems] = useState<CatalogItem[]>([]);
+  const [collections, setCollections] = useState<CatalogCollection[]>([]);
   const [prices, setPrices] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [busyCollectionId, setBusyCollectionId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const request = useCallback(
@@ -81,6 +100,7 @@ export default function StudioCatalogManager({
       const payload = await request('GET');
       const nextItems = payload.items ?? [];
       setItems(nextItems);
+      setCollections(payload.collections ?? []);
       setPrices(
         Object.fromEntries(
           nextItems.map((item) => [
@@ -151,6 +171,41 @@ export default function StudioCatalogManager({
     }
   }
 
+  async function updateCollection(
+    collection: CatalogCollection,
+    action: 'publish' | 'unpublish',
+  ) {
+    setBusyCollectionId(collection.id);
+    setError('');
+    try {
+      const payload = await request('POST', {
+        entityType: 'collection',
+        collectionId: collection.id,
+        action,
+      });
+      if (!payload.collection) {
+        throw new Error('JGA Studio returned no updated collection.');
+      }
+
+      setCollections((current) =>
+        current.map((candidate) =>
+          candidate.id === collection.id
+            ? { ...candidate, ...payload.collection }
+            : candidate,
+        ),
+      );
+    } catch (updateError) {
+      const message =
+        updateError instanceof Error
+          ? updateError.message
+          : 'The collection update failed.';
+      setError(message);
+      Alert.alert('Collection update failed', message);
+    } finally {
+      setBusyCollectionId(null);
+    }
+  }
+
   if (loading && isAuthorized === null) {
     return null;
   }
@@ -191,6 +246,113 @@ export default function StudioCatalogManager({
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <View style={styles.catalogSubsection}>
+        <View style={styles.subsectionHeading}>
+          <View>
+            <Text style={styles.subsectionTitle}>Discover collections</Text>
+            <Text style={styles.subsectionCopy}>Collection visibility</Text>
+          </View>
+          <Text style={styles.subsectionCount}>{collections.length}</Text>
+        </View>
+
+        {collections.length === 0 ? (
+          <View style={styles.notice}>
+            <Text style={styles.mutedText}>
+              Push a collection from Archive Atlas to prepare it for Discover.
+            </Text>
+          </View>
+        ) : (
+          collections.map((collection) => {
+            const isPublished = Boolean(collection.published_at);
+            const isBusy = busyCollectionId === collection.id;
+            return (
+              <View key={collection.id} style={styles.collectionRow}>
+                {collection.cover_image_url ? (
+                  <Image
+                    source={{ uri: collection.cover_image_url }}
+                    style={styles.collectionCover}
+                  />
+                ) : (
+                  <View style={styles.collectionCoverPlaceholder}>
+                    <Ionicons name="albums-outline" size={25} color={theme.accent} />
+                  </View>
+                )}
+
+                <View style={styles.collectionBody}>
+                  <View style={styles.itemHeading}>
+                    <Text style={styles.itemTitle} numberOfLines={2}>
+                      {collection.title}
+                    </Text>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        isPublished ? styles.liveBadge : styles.draftBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusText,
+                          isPublished ? styles.liveText : styles.draftText,
+                        ]}
+                      >
+                        {isPublished ? 'Live' : 'Draft'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.collectionMeta}>
+                    {collection.artwork_count} works · {collection.published_artwork_count} live
+                  </Text>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.publishButton,
+                      isPublished ? styles.unpublishButton : styles.goLiveButton,
+                    ]}
+                    onPress={() =>
+                      updateCollection(
+                        collection,
+                        isPublished ? 'unpublish' : 'publish',
+                      )
+                    }
+                    disabled={isBusy}
+                  >
+                    {isBusy ? (
+                      <ActivityIndicator
+                        size="small"
+                        color={isPublished ? theme.text : '#fff'}
+                      />
+                    ) : (
+                      <Ionicons
+                        name={isPublished ? 'eye-off-outline' : 'eye-outline'}
+                        size={17}
+                        color={isPublished ? theme.text : '#fff'}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.publishButtonText,
+                        isPublished && styles.unpublishButtonText,
+                      ]}
+                    >
+                      {isPublished ? 'Remove from Discover' : 'Publish to Discover'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+
+      <View style={styles.subsectionHeading}>
+        <View>
+          <Text style={styles.subsectionTitle}>Artwork catalog</Text>
+          <Text style={styles.subsectionCopy}>Set price and publication per work.</Text>
+        </View>
+        <Text style={styles.subsectionCount}>{items.length}</Text>
+      </View>
+
       {items.length === 0 ? (
         <View style={styles.notice}>
           <Text style={styles.mutedText}>No artworks have been sent from Archive Atlas yet.</Text>
@@ -336,6 +498,82 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       borderRadius: 8,
       padding: 16,
       gap: 12,
+    },
+    catalogSubsection: {
+      paddingBottom: 24,
+      marginBottom: 24,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    subsectionHeading: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 12,
+      marginBottom: 10,
+    },
+    subsectionTitle: {
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: '700',
+      marginBottom: 3,
+    },
+    subsectionCopy: {
+      maxWidth: 310,
+      color: theme.text,
+      opacity: 0.65,
+      fontSize: 12,
+      lineHeight: 17,
+    },
+    subsectionCount: {
+      minWidth: 27,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      color: theme.accent,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 4,
+      fontSize: 12,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    collectionRow: {
+      minHeight: 132,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: 12,
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    collectionCover: {
+      width: 92,
+      minHeight: 118,
+      borderRadius: 6,
+      backgroundColor: theme.background,
+    },
+    collectionCoverPlaceholder: {
+      width: 92,
+      minHeight: 118,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 6,
+      backgroundColor: theme.background,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    collectionBody: {
+      flex: 1,
+      minWidth: 0,
+      justifyContent: 'space-between',
+    },
+    collectionMeta: {
+      color: theme.text,
+      opacity: 0.66,
+      fontSize: 12,
+      marginBottom: 10,
     },
     catalogRow: {
       backgroundColor: theme.card,

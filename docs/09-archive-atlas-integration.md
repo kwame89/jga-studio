@@ -1,6 +1,6 @@
 # 09 — Archive Atlas Integration Spec
 
-**Status:** Draft v0.1 · 2026-07-15
+**Status:** Draft v0.6 · 2026-07-16
 **Upstream:** [Archive Atlas](https://github.com/kwame89/archive-atlas) —
 artist-first provenance registry with Stellar-anchored event trails
 (MVP complete, per its PRD).
@@ -10,8 +10,9 @@ artist-first provenance registry with Stellar-anchored event trails
 | Concern | System of record |
 |---|---|
 | Artwork identity: title, medium, dimensions, year, edition info, description, tags, images | **Archive Atlas** |
+| Collection identity: title, statement, years, cover, ordered artwork membership | **Archive Atlas** |
 | Provenance: creation, ownership, custody, exhibitions, condition reports (Stellar-anchored) | **Archive Atlas** |
-| Commerce: price, availability, size bucket, holds, orders, payments, auctions, rewards | **JGA Studio** |
+| Commerce and presentation: price, availability, collection publication, holds, orders, payments, auctions, rewards | **JGA Studio** |
 
 Jay authors artwork records **once, in Archive Atlas**, and pushes them to
 JGA Studio. JGA Studio never edits synced identity fields; Atlas never
@@ -31,6 +32,9 @@ substance, Atlas's public per-piece provenance page.
   the canonical record: `atlas_artwork_id`, title, medium, dimensions,
   year, edition info, description, tags, image manifest (storage URLs +
   primary flag + alt text), and the public provenance page URL.
+- Atlas can also push an ordered collection manifest. The receiver imports its
+  artworks first, then upserts collection identity and membership by
+  `atlas_collection_id`. Re-pushing never changes JGA's publication state.
 - **Idempotent upsert** keyed on `art_pieces.atlas_artwork_id` (unique).
   New id → create as `draft`. Existing id → update identity fields only.
 - **Images are copied**, not hotlinked: the import function downloads each
@@ -47,8 +51,9 @@ substance, Atlas's public per-piece provenance page.
 `price_cents`, `size_bucket`, `status`, `edition_size` locks, auction
 lots, and all commerce state are JGA-owned. Two interaction rules:
 
-1. **Publish still happens in JGA.** A pushed artwork lands as `draft`;
-   Jay sets price/size bucket/availability in the JGA admin (04) as today.
+1. **Publish still happens in JGA.** Pushed artworks and collections land as
+   drafts. Jay sets artwork price/availability and separately publishes a
+   collection to Discover in the JGA admin.
 2. **Post-sale locks beat sync.** Field locks from 04 §1 (e.g. edition
    size after first sale) apply to `atlas-import` updates exactly as they
    do to admin edits: a re-push that would violate a lock updates the
@@ -92,6 +97,8 @@ logs sales in Atlas manually**, as he would for any offline sale.
 | `atlas_artwork_id`, `atlas_synced_at`, `provenance_url` on `art_pieces` | **In** |
 | `atlas-import` Edge Function (HMAC, idempotent, image copy, locks-aware) | **In** |
 | Atlas-side "Push to JGA Studio" action | **In** (built in the Atlas repo) |
+| Atlas collections + collection push | **In** |
+| Collection-led mobile Discover feed | **In** |
 | "View provenance record" link on piece pages | **In** |
 | Automated sale writeback to Atlas | **Out** — §6, manual for now |
 | Atlas mainnet migration | Atlas's own decision, out of JGA scope |
@@ -109,6 +116,7 @@ frontend references a table or function that is not live yet.
 | Draft visibility + atomic image reconciliation | `supabase/migrations/20260715010000_atlas_publication_and_image_reconcile.sql` — preserves currently visible Atlas works, keeps future imports unpublished, restricts public reads, and installs the transactional image-manifest RPC |
 | `push-to-jga` sender + UI | archive-atlas repo: `supabase/functions/push-to-jga/`, `src/components/PushToJgaButton.tsx` (JGA Studio panel only for Jay's allowlisted root profile and its controller) |
 | Catalog publication + price controls | `supabase/functions/admin-catalog/`, `components/StudioCatalogManager.tsx`, `supabase/migrations/20260716000000_studio_catalog_admin.sql` |
+| Ordered collection import + Discover publication | `supabase/migrations/20260716010000_studio_collections.sql`, `lib/studioCollections.ts`, `app/(tabs)/discover.tsx`, `app/collection/[id].tsx` |
 
 Deploy runbook:
 1. Generate the shared secret once: `openssl rand -hex 32`.
@@ -141,6 +149,8 @@ kept pointed at the primary image copy so the current app renders it;
 `alt_text` falls back to the title (Atlas doesn't capture alt text yet).
 Existing Atlas-backed works are backfilled as published; each future import
 starts with `published_at = null` and remains hidden until JGA publishes it.
+Imported collections likewise remain drafts until Jay publishes them. Discover
+only returns published collections and published member artworks.
 
 ## 9. Open questions
 
@@ -154,6 +164,9 @@ starts with `published_at = null` and remains hidden until JGA publishes it.
 
 ## Changelog
 
+- v0.6 (2026-07-16) — Added ordered Archive Atlas collections, idempotent
+  collection manifests, separate JGA collection publication, admin controls,
+  and a collection-led mobile Discover experience.
 - v0.5 (2026-07-16) — Added Privy-token-verified catalog administration with
   audited price, publish, and unpublish actions. Archive Atlas now uses a
   server-managed profile integration allowlist, so only Jay's profile exposes

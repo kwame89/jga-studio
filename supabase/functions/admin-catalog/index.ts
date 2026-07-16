@@ -6,6 +6,23 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PRIVY_APP_ID = Deno.env.get("PRIVY_APP_ID");
 const PRIVY_APP_SECRET = Deno.env.get("PRIVY_APP_SECRET");
 
+interface CatalogItemRow {
+  id: number;
+  image_url: string | null;
+  published_at: string | null;
+}
+
+interface CatalogCollectionRow {
+  id: string;
+  cover_art_piece_id: number | null;
+  [key: string]: unknown;
+}
+
+interface CatalogMembershipRow {
+  collection_id: string;
+  art_piece_id: number;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -30,13 +47,16 @@ function safeErrorMessage(message: string) {
     "Price must be greater than zero",
     "Set a price greater than zero before publishing",
     "Add an artwork image before publishing",
+    "Studio collection not found",
+    "Publish at least one collection artwork first",
+    "Unsupported collection action",
     "Unsupported catalog action",
   ];
   return knownMessages.find((known) => message.includes(known)) ??
     "The catalog update could not be completed";
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -80,23 +100,90 @@ Deno.serve(async (req) => {
   }
 
   if (req.method === "GET") {
-    const { data, error } = await supabase
-      .from("art_pieces")
-      .select(
-        "id, atlas_artwork_id, title, image_url, price_usd, published_at, atlas_synced_at",
-      )
-      .order("created_at", { ascending: false });
+    const [
+      { data: items, error: itemsError },
+      { data: collections, error: collectionsError },
+      { data: memberships, error: membershipsError },
+    ] = await Promise.all([
+      supabase
+        .from("art_pieces")
+        .select(
+          "id, atlas_artwork_id, title, image_url, price_usd, published_at, atlas_synced_at",
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("studio_collections")
+        .select(
+          "id, atlas_collection_id, title, description, start_year, end_year, cover_art_piece_id, published_at, atlas_synced_at",
+        )
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("studio_collection_artworks")
+        .select("collection_id, art_piece_id"),
+    ]);
 
-    if (error) {
+    if (itemsError || collectionsError || membershipsError) {
       return jsonResponse({ error: "Could not load the studio catalog" }, 500);
     }
-    return jsonResponse({ is_admin: true, items: data ?? [] });
+
+    const itemRows = (items ?? []) as CatalogItemRow[];
+    const membershipRows = (memberships ?? []) as CatalogMembershipRow[];
+    const piecesById = new Map(
+      itemRows.map((item) => [item.id, item])
+    );
+    const collectionRows = ((collections ?? []) as CatalogCollectionRow[]).map((collection) => {
+      const collectionMemberships = membershipRows.filter(
+        (membership) => membership.collection_id === collection.id
+      );
+      return {
+        ...collection,
+        artwork_count: collectionMemberships.length,
+        published_artwork_count: collectionMemberships.filter(
+          (membership) => Boolean(piecesById.get(membership.art_piece_id)?.published_at)
+        ).length,
+        cover_image_url: collection.cover_art_piece_id
+          ? piecesById.get(collection.cover_art_piece_id)?.image_url ?? null
+          : null,
+      };
+    });
+
+    return jsonResponse({
+      is_admin: true,
+      items: itemRows,
+      collections: collectionRows,
+    });
   }
 
   const body = await req.json().catch(() => null);
-  const artPieceId = Number(body?.artPieceId);
+  const entityType = body?.entityType === "collection" ? "collection" : "artwork";
   const action = typeof body?.action === "string" ? body.action : "";
 
+  if (entityType === "collection") {
+    const collectionId =
+      typeof body?.collectionId === "string" ? body.collectionId : "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(collectionId)) {
+      return jsonResponse({ error: "A valid collection id is required" }, 400);
+    }
+    if (!["publish", "unpublish"].includes(action)) {
+      return jsonResponse({ error: "Unsupported collection action" }, 400);
+    }
+
+    const { data, error } = await supabase.rpc(
+      "admin_update_studio_collection",
+      {
+        p_actor_privy_user_id: actorPrivyUserId,
+        p_collection_id: collectionId,
+        p_action: action,
+      }
+    );
+    if (error) {
+      return jsonResponse({ error: safeErrorMessage(error.message) }, 400);
+    }
+    return jsonResponse({ collection: data });
+  }
+
+  const artPieceId = Number(body?.artPieceId);
   if (!Number.isSafeInteger(artPieceId) || artPieceId <= 0) {
     return jsonResponse({ error: "A valid artwork id is required" }, 400);
   }

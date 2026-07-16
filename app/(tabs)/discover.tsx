@@ -1,107 +1,67 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  Dimensions,
-  Platform,
   ActivityIndicator,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../supabaseClient';
+import { Link, useRouter } from 'expo-router';
 import { useTheme } from '../../themeContext';
-
-const { width } = Dimensions.get('window');
-
-type ArtPiece = {
-  id: number;
-  title: string;
-  image_url: string;
-  price_usd: number;
-  collection_type?: string;
-  medium?: string;
-  created_at?: string;
-};
-
-const CATEGORY_MAP: Record<string, string[]> = {
-  Paintings: ['Paintings', 'Painting'],
-  'Mixed Media': ['Mixed Media', 'mixed media', 'Mixed media'],
-  Prints: ['Prints', 'Print'],
-  Drawings: ['Drawings', 'Drawing'],
-};
-
-const CATEGORY_ORDER = ['Paintings', 'Mixed Media', 'Prints', 'Drawings'];
-
-function matchesCategory(item: ArtPiece, category: string) {
-  const allowedValues = CATEGORY_MAP[category] || [category];
-  const normalizedMedium = (item.medium || '').toLowerCase().trim();
-
-  return allowedValues.some(
-    (value) => value.toLowerCase().trim() === normalizedMedium
-  );
-}
+import {
+  formatArtworkPrice,
+  formatCollectionYears,
+  listPublishedArtworks,
+  listPublishedCollections,
+  type StudioArtwork,
+  type StudioCollection,
+} from '../../lib/studioCollections';
 
 export default function Discover() {
   const router = useRouter();
   const theme = useTheme();
-  const { category } = useLocalSearchParams();
-
-  const [artworks, setArtworks] = useState<ArtPiece[]>([]);
+  const styles = createStyles(theme);
+  const [collections, setCollections] = useState<StudioCollection[]>([]);
+  const [artworks, setArtworks] = useState<StudioArtwork[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchArtPieces();
+    let cancelled = false;
+
+    async function loadDiscover() {
+      setLoading(true);
+      setError('');
+      try {
+        const [nextCollections, nextArtworks] = await Promise.all([
+          listPublishedCollections(),
+          listPublishedArtworks(),
+        ]);
+        if (cancelled) return;
+        setCollections(nextCollections);
+        setArtworks(nextArtworks);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'Could not load Discover.',
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadDiscover();
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  const fetchArtPieces = async () => {
-    setLoading(true);
-
-    // Archive Atlas is the system of record for artwork (docs/09): only
-    // pieces pushed from Atlas appear in the app.
-    const { data, error } = await supabase
-      .from('art_pieces')
-      .select('*')
-      .not('atlas_artwork_id', 'is', null)
-      .not('published_at', 'is', null)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Supabase error:', error);
-      setLoading(false);
-      return;
-    }
-
-    setArtworks(data || []);
-    setLoading(false);
-  };
-
-  const activeCategory =
-    typeof category === 'string' && category.trim() ? category : null;
-
-  const filteredArtworks = useMemo(() => {
-    if (!activeCategory) return artworks;
-    return artworks.filter((item) => matchesCategory(item, activeCategory));
-  }, [artworks, activeCategory]);
-
-  const heroArtwork = filteredArtworks[0] || artworks[0];
-  const totalWorksLabel = filteredArtworks.length;
-  const styles = createStyles(theme);
-
-  const handleSelectCategory = (selectedCategory: string | null) => {
-    if (!selectedCategory) {
-      router.replace('/discover');
-      return;
-    }
-
-    router.replace({
-      pathname: '/discover',
-      params: { category: selectedCategory },
-    });
-  };
 
   return (
     <ScrollView
@@ -114,233 +74,173 @@ export default function Discover() {
           <Text style={styles.eyebrow}>JGA Studio</Text>
           <Text style={styles.title}>Discover</Text>
         </View>
-
         <TouchableOpacity
           style={styles.headerButton}
           activeOpacity={0.85}
           onPress={() => router.push('/(tabs)')}
+          accessibilityLabel="Return home"
         >
-          <Ionicons name="grid-outline" size={18} color={theme.text} />
+          <Ionicons name="grid-outline" size={19} color={theme.text} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.selectorSection}>
-        <View style={styles.selectorHeadingRow}>
-          <Text style={styles.selectorTitle}>Browse by Category</Text>
-          <Text style={styles.selectorMeta}>
-            {loading
-              ? 'Loading...'
-              : activeCategory
-              ? `${totalWorksLabel} works`
-              : `${artworks.length} works`}
-          </Text>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.selectorScroll}
-        >
-          <TouchableOpacity
-            activeOpacity={0.88}
-            style={[
-              styles.selectorChip,
-              !activeCategory && styles.selectorChipActive,
-            ]}
-            onPress={() => handleSelectCategory(null)}
-          >
-            <Text
-              style={[
-                styles.selectorChipText,
-                !activeCategory && styles.selectorChipTextActive,
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-
-          {CATEGORY_ORDER.map((item) => {
-            const isActive = activeCategory === item;
-
-            return (
-              <TouchableOpacity
-                key={item}
-                activeOpacity={0.88}
-                style={[
-                  styles.selectorChip,
-                  isActive && styles.selectorChipActive,
-                ]}
-                onPress={() => handleSelectCategory(item)}
-              >
-                <Text
-                  style={[
-                    styles.selectorChipText,
-                    isActive && styles.selectorChipTextActive,
-                  ]}
-                >
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+      <View style={styles.intro}>
+        <Text style={styles.introTitle}>Bodies of work</Text>
+        <Text style={styles.introText}>
+          Series shaped by place, memory, mythology, and migration.
+        </Text>
       </View>
 
-      {activeCategory && (
-        <View style={styles.categoryBanner}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{activeCategory}</Text>
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => handleSelectCategory(null)}
-          >
-            <Text style={styles.clearText}>Clear</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {loading ? (
-        <View style={styles.loadingSection}>
+        <View style={styles.loadingState}>
           <ActivityIndicator size="small" color={theme.accent} />
-          <Text style={styles.loadingText}>Loading studio works...</Text>
+          <Text style={styles.mutedText}>Loading collections…</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="alert-circle-outline" size={28} color="#A33A34" />
+          <Text style={styles.emptyTitle}>Discover is unavailable</Text>
+          <Text style={styles.mutedText}>{error}</Text>
+        </View>
+      ) : collections.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="albums-outline" size={30} color={theme.accent} />
+          <Text style={styles.emptyTitle}>Collections are being prepared</Text>
+          <Text style={styles.mutedText}>
+            Published bodies of work will appear here.
+          </Text>
         </View>
       ) : (
-        <>
-          {heroArtwork && (
-            <View style={styles.heroSection}>
-              <Link href={`/artwork/${heroArtwork.id}`} asChild>
-                <TouchableOpacity activeOpacity={0.9} style={styles.heroCard}>
-                  <Image
-                    source={{ uri: heroArtwork.image_url }}
-                    style={styles.heroImage}
-                  />
-                  <View style={styles.heroOverlay} />
-                  <View style={styles.heroContent}>
-                    <Text style={styles.heroEyebrow}>
-                      {activeCategory ? `${activeCategory} Highlight` : 'Studio Highlight'}
-                    </Text>
-                    <Text style={styles.heroTitle} numberOfLines={2}>
-                      {heroArtwork.title}
-                    </Text>
-                    <Text style={styles.heroSubtitle}>
-                      {activeCategory
-                        ? `A selected work from the ${activeCategory.toLowerCase()} grouping`
-                        : 'A featured work from Jay Golding’s evolving studio collection'}
+        <View style={styles.collectionList}>
+          {collections.map((collection, collectionIndex) => (
+            <Link
+              key={collection.id}
+              href={`/collection/${collection.id}`}
+              asChild
+            >
+              <TouchableOpacity
+                style={styles.collectionCard}
+                activeOpacity={0.9}
+              >
+                <View style={styles.coverFrame}>
+                  {collection.cover?.image_url ? (
+                    <Image
+                      source={{ uri: collection.cover.image_url }}
+                      style={styles.coverImage}
+                    />
+                  ) : (
+                    <View style={styles.coverPlaceholder}>
+                      <Ionicons
+                        name="image-outline"
+                        size={30}
+                        color={theme.accent}
+                      />
+                    </View>
+                  )}
+                  <View style={styles.coverIndex}>
+                    <Text style={styles.coverIndexText}>
+                      {String(collectionIndex + 1).padStart(2, '0')}
                     </Text>
                   </View>
+                </View>
+
+                <View style={styles.collectionCopy}>
+                  <View style={styles.collectionMetaRow}>
+                    <Text style={styles.collectionMeta}>
+                      {formatCollectionYears(collection)}
+                    </Text>
+                    <Text style={styles.collectionMeta}>
+                      {collection.artworks.length} work
+                      {collection.artworks.length === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                  <Text style={styles.collectionTitle}>
+                    {collection.title}
+                  </Text>
+                  {collection.description ? (
+                    <Text style={styles.collectionDescription} numberOfLines={3}>
+                      {collection.description}
+                    </Text>
+                  ) : null}
+
+                  {collection.artworks.length > 1 ? (
+                    <View style={styles.previewStrip}>
+                      {collection.artworks.slice(0, 4).map((artwork) => (
+                        <View key={artwork.id} style={styles.previewFrame}>
+                          {artwork.image_url ? (
+                            <Image
+                              source={{ uri: artwork.image_url }}
+                              style={styles.previewImage}
+                            />
+                          ) : (
+                            <View style={styles.previewPlaceholder} />
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  <View style={styles.collectionLink}>
+                    <Text style={styles.collectionLinkText}>View collection</Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={17}
+                      color={theme.accent}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Link>
+          ))}
+        </View>
+      )}
+
+      {!loading && artworks.length > 0 ? (
+        <View style={styles.allWorksSection}>
+          <View style={styles.sectionHeading}>
+            <View>
+              <Text style={styles.sectionEyebrow}>Studio catalog</Text>
+              <Text style={styles.sectionTitle}>All available works</Text>
+            </View>
+            <Text style={styles.sectionCount}>{artworks.length}</Text>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.artworkRail}
+          >
+            {artworks.map((artwork) => (
+              <Link key={artwork.id} href={`/artwork/${artwork.id}`} asChild>
+                <TouchableOpacity style={styles.artworkCard} activeOpacity={0.9}>
+                  {artwork.image_url ? (
+                    <Image
+                      source={{ uri: artwork.image_url }}
+                      style={styles.artworkImage}
+                    />
+                  ) : (
+                    <View style={styles.artworkPlaceholder}>
+                      <Ionicons
+                        name="image-outline"
+                        size={25}
+                        color={theme.accent}
+                      />
+                    </View>
+                  )}
+                  <Text style={styles.artworkTitle} numberOfLines={2}>
+                    {artwork.title}
+                  </Text>
+                  <Text style={styles.artworkPrice}>
+                    {formatArtworkPrice(artwork.price_usd)}
+                  </Text>
                 </TouchableOpacity>
               </Link>
-            </View>
-          )}
-
-          <View style={styles.artistSection}>
-            <View style={styles.artistPhotoWrap}>
-              <Image
-                source={require('../../assets/jay-golding.jpeg')}
-                style={styles.artistPhoto}
-                resizeMode="cover"
-              />
-            </View>
-
-            <View style={styles.artistTextBlock}>
-              <Text style={styles.artistEyebrow}>Artist Profile</Text>
-              <Text style={styles.artistName}>Jay Golding</Text>
-              <Text style={styles.artistSummary}>
-                Jamaican-born, U.S.-based artist exploring indigenous cultures,
-                mythology, migration, portraiture, memory, and landscape.
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.bioSection}>
-            <Text style={styles.bioTitle}>About the Artist</Text>
-
-            <Text style={styles.bioText}>
-              Jay Golding is a Jamaican-born, U.S.-based artist and descendant of
-              the Accompong Maroons. His works primarily explore indigenous
-              cultures, mythology, and migration, ranging from portraits and
-              landscapes to nostalgic memories.
-            </Text>
-
-            <Text style={styles.bioText}>
-              He earned his BFA in Studio Art from Kean University in 2015 and has
-              exhibited widely in the tri-state area. His work is held in the Eileen
-              S. Kaminsky Family Foundation collection. In the fall of 2025, one of
-              his paintings was sold at Swann Auction Galleries in NYC.
-            </Text>
-          </View>
-
-          <View style={styles.worksHeader}>
-            <Text style={styles.worksTitle}>
-              {activeCategory ? `${activeCategory} Works` : 'Explore the Collection'}
-            </Text>
-            <Text style={styles.worksSubtitle}>
-              {activeCategory
-                ? `Browse available works in ${activeCategory.toLowerCase()}`
-                : 'Browse selected works from the studio'}
-            </Text>
-          </View>
-
-          {filteredArtworks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons
-                name="images-outline"
-                size={30}
-                color={theme.isDark ? '#A0A0A0' : '#7B7684'}
-              />
-              <Text style={styles.emptyTitle}>No works in this category yet</Text>
-              <Text style={styles.emptyText}>
-                Try another category or return to the full studio collection.
-              </Text>
-
-              <TouchableOpacity
-                style={styles.emptyButton}
-                activeOpacity={0.88}
-                onPress={() => handleSelectCategory(null)}
-              >
-                <Text style={styles.emptyButtonText}>View All Works</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.grid}>
-              {filteredArtworks.map((item) => (
-                <Link key={item.id} href={`/artwork/${item.id}`} asChild>
-                  <TouchableOpacity style={styles.card} activeOpacity={0.9}>
-                    <Image
-                      source={{ uri: item.image_url }}
-                      style={styles.image}
-                    />
-                    <View style={styles.cardMeta}>
-                      <Text style={styles.artTitle} numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      <Text style={styles.price}>${item.price_usd}</Text>
-                    </View>
-                  </TouchableOpacity>
-                </Link>
-              ))}
-            </View>
-          )}
-
-          <View style={styles.collectionsSection}>
-            <TouchableOpacity
-              style={styles.collectionButton}
-              onPress={() => router.replace('/(tabs)')}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.buttonText}>Browse Home</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
     </ScrollView>
   );
-}
-
-function SectionSpacer() {
-  return <View style={{ height: 8 }} />;
 }
 
 const createStyles = (theme: ReturnType<typeof useTheme>) =>
@@ -352,345 +252,272 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     content: {
       paddingBottom: 120,
     },
-
     header: {
-      paddingTop: Platform.OS === 'ios' ? 62 : 28,
+      minHeight: 108,
+      paddingTop: Platform.OS === 'ios' ? 58 : 24,
       paddingHorizontal: 18,
       paddingBottom: 14,
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       justifyContent: 'space-between',
     },
     eyebrow: {
-      color: theme.accent,
-      fontSize: 13,
+      color: '#A36A2A',
+      fontSize: 11,
       fontWeight: '700',
-      letterSpacing: 0.8,
       textTransform: 'uppercase',
-      marginBottom: 4,
+      marginBottom: 5,
     },
     title: {
+      color: theme.text,
       fontSize: 30,
       fontWeight: '700',
-      color: theme.text,
     },
     headerButton: {
       width: 42,
       height: 42,
-      borderRadius: 21,
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.border,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-
-    selectorSection: {
-      marginBottom: 18,
-    },
-    selectorHeadingRow: {
-      paddingHorizontal: 18,
-      marginBottom: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    selectorTitle: {
-      color: theme.text,
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    selectorMeta: {
-      color: theme.isDark ? '#9C9C9C' : '#6E6A75',
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    selectorScroll: {
-      paddingHorizontal: 18,
-      paddingRight: 6,
-    },
-    selectorChip: {
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 999,
-      marginRight: 10,
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
+      borderRadius: 8,
     },
-    selectorChipActive: {
-      backgroundColor: theme.accent,
-      borderColor: theme.accent,
+    intro: {
+      paddingHorizontal: 18,
+      paddingTop: 20,
+      paddingBottom: 24,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
     },
-    selectorChipText: {
+    introTitle: {
       color: theme.text,
+      fontFamily: 'serif',
+      fontSize: 24,
+      marginBottom: 7,
+    },
+    introText: {
+      maxWidth: 520,
+      color: theme.text,
+      opacity: 0.68,
       fontSize: 14,
-      fontWeight: '600',
+      lineHeight: 21,
     },
-    selectorChipTextActive: {
-      color: '#FFFFFF',
-    },
-
-    categoryBanner: {
-      paddingHorizontal: 18,
-      marginBottom: 14,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    categoryBadge: {
-      backgroundColor: theme.isDark ? '#2A2236' : '#F1EAFE',
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 999,
-    },
-    categoryBadgeText: {
-      color: theme.accent,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    clearText: {
-      color: theme.accent,
-      fontWeight: '700',
-      fontSize: 14,
-    },
-
-    loadingSection: {
-      paddingHorizontal: 18,
-      paddingVertical: 40,
+    loadingState: {
+      minHeight: 230,
       alignItems: 'center',
       justifyContent: 'center',
       gap: 12,
+      marginHorizontal: 18,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.border,
     },
-    loadingText: {
-      color: theme.isDark ? '#B3B3B3' : '#666',
-      fontSize: 14,
+    emptyState: {
+      minHeight: 230,
+      marginHorizontal: 18,
+      paddingHorizontal: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: theme.border,
     },
-
-    heroSection: {
+    emptyTitle: {
+      color: theme.text,
+      fontSize: 17,
+      fontWeight: '700',
+      marginTop: 10,
+      marginBottom: 5,
+      textAlign: 'center',
+    },
+    mutedText: {
+      color: theme.text,
+      opacity: 0.62,
+      fontSize: 13,
+      lineHeight: 19,
+      textAlign: 'center',
+    },
+    collectionList: {
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    collectionCard: {
       paddingHorizontal: 18,
-      marginBottom: 26,
+      paddingVertical: 24,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
-    heroCard: {
-      height: width * 0.9,
-      borderRadius: 28,
+    coverFrame: {
+      width: '100%',
+      aspectRatio: 1.25,
+      position: 'relative',
       overflow: 'hidden',
       backgroundColor: theme.card,
-      position: 'relative',
+      borderRadius: 8,
     },
-    heroImage: {
+    coverImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'contain',
+    },
+    coverPlaceholder: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    coverIndex: {
+      minWidth: 40,
+      height: 32,
+      position: 'absolute',
+      top: 12,
+      left: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 9,
+      backgroundColor: 'rgba(12, 12, 12, 0.82)',
+      borderRadius: 4,
+    },
+    coverIndexText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    collectionCopy: {
+      paddingTop: 16,
+    },
+    collectionMetaRow: {
+      minHeight: 22,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    collectionMeta: {
+      color: '#A36A2A',
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    collectionTitle: {
+      color: theme.text,
+      fontFamily: 'serif',
+      fontSize: 28,
+      lineHeight: 34,
+      marginTop: 5,
+    },
+    collectionDescription: {
+      color: theme.text,
+      opacity: 0.72,
+      fontSize: 14,
+      lineHeight: 21,
+      marginTop: 9,
+    },
+    previewStrip: {
+      height: 66,
+      flexDirection: 'row',
+      gap: 6,
+      marginTop: 16,
+    },
+    previewFrame: {
+      width: 56,
+      height: 66,
+      overflow: 'hidden',
+      backgroundColor: theme.card,
+      borderRadius: 4,
+    },
+    previewImage: {
       width: '100%',
       height: '100%',
       resizeMode: 'cover',
     },
-    heroOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.28)',
-    },
-    heroContent: {
-      position: 'absolute',
-      left: 18,
-      right: 18,
-      bottom: 20,
-    },
-    heroEyebrow: {
-      color: '#F2E9FF',
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.9,
-      marginBottom: 8,
-    },
-    heroTitle: {
-      color: '#FFFFFF',
-      fontSize: 28,
-      lineHeight: 32,
-      fontWeight: '700',
-      marginBottom: 8,
-    },
-    heroSubtitle: {
-      color: 'rgba(255,255,255,0.9)',
-      fontSize: 14,
-      lineHeight: 20,
-      maxWidth: '86%',
-    },
-
-    artistSection: {
-      paddingHorizontal: 18,
-      marginBottom: 28,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    artistPhotoWrap: {
-      marginRight: 16,
-    },
-    artistPhoto: {
-      width: 92,
-      height: 92,
-      borderRadius: 46,
-      borderWidth: 4,
-      borderColor: theme.card,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme.isDark ? 0 : 0.12,
-          shadowRadius: 10,
-        },
-        android: {
-          elevation: theme.isDark ? 0 : 6,
-        },
-      }),
-    },
-    artistTextBlock: {
+    previewPlaceholder: {
       flex: 1,
+      backgroundColor: theme.card,
     },
-    artistEyebrow: {
+    collectionLink: {
+      minHeight: 40,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 13,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+    collectionLinkText: {
       color: theme.accent,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.8,
-      marginBottom: 4,
     },
-    artistName: {
-      color: theme.text,
-      fontSize: 24,
-      fontWeight: '700',
-      marginBottom: 6,
+    allWorksSection: {
+      paddingTop: 34,
     },
-    artistSummary: {
-      color: theme.isDark ? '#B0B0B0' : '#5B5663',
-      fontSize: 14,
-      lineHeight: 21,
-    },
-
-    bioSection: {
-      paddingHorizontal: 24,
-      marginBottom: 34,
-    },
-    bioTitle: {
-      fontSize: 21,
-      fontWeight: '700',
-      color: theme.text,
-      marginBottom: 16,
-    },
-    bioText: {
-      fontSize: 16,
-      lineHeight: 26,
-      color: theme.isDark ? '#B3B3B3' : '#444',
-      marginBottom: 18,
-    },
-
-    worksHeader: {
-      paddingHorizontal: 18,
-      marginBottom: 14,
-    },
-    worksTitle: {
-      color: theme.text,
-      fontSize: 22,
-      fontWeight: '700',
-      marginBottom: 4,
-    },
-    worksSubtitle: {
-      color: theme.isDark ? '#9C9C9C' : '#6E6A75',
-      fontSize: 14,
-    },
-
-    grid: {
+    sectionHeading: {
+      minHeight: 60,
       paddingHorizontal: 18,
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
-      rowGap: 18,
     },
-    card: {
-      width: (width - 46) / 2,
-    },
-    image: {
-      width: '100%',
-      height: ((width - 46) / 2) * 1.18,
-      borderRadius: 18,
-      backgroundColor: theme.card,
-    },
-    cardMeta: {
-      paddingTop: 10,
-      paddingHorizontal: 2,
-    },
-    artTitle: {
-      color: theme.text,
-      fontSize: 14,
-      lineHeight: 20,
-      fontWeight: '600',
-      marginBottom: 4,
-    },
-    price: {
-      color: theme.accent,
+    sectionEyebrow: {
+      color: '#3E7569',
+      fontSize: 11,
       fontWeight: '700',
-      fontSize: 14,
+      textTransform: 'uppercase',
+      marginBottom: 5,
     },
-
-    emptyState: {
-      marginHorizontal: 18,
-      paddingVertical: 28,
-      paddingHorizontal: 22,
-      borderRadius: 20,
-      backgroundColor: theme.card,
-      borderWidth: 1,
-      borderColor: theme.border,
-      alignItems: 'center',
-    },
-    emptyTitle: {
+    sectionTitle: {
       color: theme.text,
-      fontSize: 18,
+      fontFamily: 'serif',
+      fontSize: 22,
+    },
+    sectionCount: {
+      minWidth: 30,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      color: theme.text,
+      backgroundColor: theme.card,
+      borderRadius: 4,
+      fontSize: 12,
       fontWeight: '700',
-      marginTop: 12,
-      marginBottom: 8,
       textAlign: 'center',
     },
-    emptyText: {
-      color: theme.isDark ? '#A0A0A0' : '#6E6A75',
-      fontSize: 15,
-      lineHeight: 22,
-      textAlign: 'center',
-      marginBottom: 18,
-    },
-    emptyButton: {
-      backgroundColor: theme.accent,
+    artworkRail: {
       paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: 999,
+      paddingRight: 6,
+      gap: 10,
     },
-    emptyButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '700',
+    artworkCard: {
+      width: 164,
+      minHeight: 246,
     },
-
-    collectionsSection: {
-      paddingHorizontal: 24,
-      marginTop: 34,
+    artworkImage: {
+      width: 164,
+      height: 190,
+      resizeMode: 'contain',
+      backgroundColor: theme.card,
+      borderRadius: 6,
     },
-    collectionButton: {
-      backgroundColor: theme.accent,
-      paddingVertical: 18,
-      borderRadius: 16,
+    artworkPlaceholder: {
+      width: 164,
+      height: 190,
       alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme.isDark ? 0 : 0.1,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: theme.isDark ? 0 : 6,
-        },
-      }),
+      justifyContent: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 6,
     },
-    buttonText: {
-      color: '#FFFFFF',
-      fontSize: 17,
-      fontWeight: '600',
+    artworkTitle: {
+      minHeight: 38,
+      color: theme.text,
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: '700',
+      marginTop: 9,
+    },
+    artworkPrice: {
+      color: theme.text,
+      opacity: 0.65,
+      fontSize: 12,
+      marginTop: 3,
     },
   });

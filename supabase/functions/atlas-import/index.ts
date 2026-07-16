@@ -1,5 +1,5 @@
-// Receives artwork identity records pushed from Archive Atlas and upserts
-// them into art_pieces + art_images. Spec: docs/09-archive-atlas-integration.md.
+// Receives artwork and collection identity records pushed from Archive Atlas
+// and upserts them into the JGA Studio catalog.
 //
 // Hard rules (docs/09 §2–3):
 //  - Service-to-service auth only: HMAC-SHA256 over `${timestamp}.${body}`
@@ -30,7 +30,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ATLAS_SHARED_SECRET = Deno.env.get("ATLAS_SHARED_SECRET");
 const ATLAS_ROOT_ARTIST_ID = Deno.env.get("ATLAS_ROOT_ARTIST_ID");
 
-const MAX_ARTWORKS = 20;
+const MAX_ARTWORKS = 30;
+const MAX_COLLECTIONS = 5;
 const MAX_IMAGES_PER_ARTWORK = 12;
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MIN_LONG_EDGE_PX = 2000;
@@ -164,6 +165,17 @@ interface PushedArtwork {
   images: PushedImage[];
 }
 
+interface PushedCollection {
+  atlas_collection_id: string;
+  root_artist_id: string;
+  title: string;
+  description: string | null;
+  start_year: number | null;
+  end_year: number | null;
+  cover_artwork_id: string | null;
+  artwork_ids: string[];
+}
+
 interface ExistingImageRow {
   id: string;
   content_hash: string | null;
@@ -182,7 +194,7 @@ interface PreparedImage {
   alt_text: string;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
   if (!ATLAS_SHARED_SECRET || !ATLAS_ROOT_ARTIST_ID) {
     return jsonResponse({ error: "atlas-import is not configured (missing function secrets)" }, 503);
@@ -205,15 +217,23 @@ Deno.serve(async (req) => {
   }
 
   let artworks: PushedArtwork[];
+  let collections: PushedCollection[];
   try {
     const parsed = JSON.parse(rawBody);
     artworks = parsed?.artworks;
+    collections = Array.isArray(parsed?.collections) ? parsed.collections : [];
     if (!Array.isArray(artworks) || artworks.length === 0) throw new Error();
     if (artworks.length > MAX_ARTWORKS) {
       return jsonResponse({ error: `At most ${MAX_ARTWORKS} artworks per push` }, 400);
     }
+    if (collections.length > MAX_COLLECTIONS) {
+      return jsonResponse({ error: `At most ${MAX_COLLECTIONS} collections per push` }, 400);
+    }
   } catch {
-    return jsonResponse({ error: "Body must be { artworks: [...] }" }, 400);
+    return jsonResponse(
+      { error: "Body must include { artworks: [...], collections?: [...] }" },
+      400
+    );
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -230,7 +250,21 @@ Deno.serve(async (req) => {
       });
     }
   }
-  return jsonResponse({ results });
+
+  const collectionResults = [];
+  for (const collection of collections) {
+    try {
+      collectionResults.push(await importOneCollection(supabase, collection));
+    } catch (err) {
+      collectionResults.push({
+        atlas_collection_id: collection?.atlas_collection_id ?? null,
+        status: "rejected" as const,
+        reason: err instanceof Error ? err.message : "Unexpected error",
+      });
+    }
+  }
+
+  return jsonResponse({ results, collection_results: collectionResults });
 });
 
 // deno-lint-ignore no-explicit-any
@@ -304,6 +338,141 @@ async function importOne(supabase: any, item: PushedArtwork) {
   }, false);
 
   return { atlas_artwork_id: item.atlas_artwork_id, status: action, images: imageResults };
+}
+
+// deno-lint-ignore no-explicit-any
+async function importOneCollection(supabase: any, item: PushedCollection) {
+  if (!item?.atlas_collection_id || !item?.title) {
+    throw new Error("atlas_collection_id and title are required");
+  }
+  if (item.root_artist_id !== ATLAS_ROOT_ARTIST_ID) {
+    await auditCollection(
+      supabase,
+      "atlas.collection_import.denied",
+      item.atlas_collection_id,
+      null,
+      {
+        reason: "root artist not allowed",
+        root_artist_id: item.root_artist_id,
+      },
+      true
+    );
+    return {
+      atlas_collection_id: item.atlas_collection_id,
+      status: "rejected" as const,
+      reason: "This JGA Studio only accepts collections from its configured Atlas artist profile",
+    };
+  }
+
+  const artworkIds = [...new Set(item.artwork_ids ?? [])];
+  if (artworkIds.length === 0) {
+    throw new Error("A collection must contain at least one artwork");
+  }
+  if (artworkIds.length !== (item.artwork_ids ?? []).length) {
+    throw new Error("A collection cannot contain duplicate artworks");
+  }
+
+  const { data: pieces, error: piecesError } = await supabase
+    .from("art_pieces")
+    .select("id, atlas_artwork_id")
+    .in("atlas_artwork_id", artworkIds);
+  if (piecesError) throw new Error(piecesError.message);
+  if ((pieces ?? []).length !== artworkIds.length) {
+    throw new Error("Every collection artwork must be imported before the collection");
+  }
+
+  const pieceIdByAtlasId = new Map(
+    (pieces ?? []).map((piece: { id: number; atlas_artwork_id: string }) => [
+      piece.atlas_artwork_id,
+      piece.id,
+    ])
+  );
+  const orderedPieceIds = artworkIds.map((artworkId) => {
+    const pieceId = pieceIdByAtlasId.get(artworkId);
+    if (!pieceId) throw new Error("Collection artwork import is incomplete");
+    return pieceId;
+  });
+  const coverPieceId =
+    (item.cover_artwork_id
+      ? pieceIdByAtlasId.get(item.cover_artwork_id)
+      : null) ?? orderedPieceIds[0];
+
+  const identityFields = {
+    title: item.title.trim(),
+    description: item.description ?? null,
+    start_year: item.start_year ?? null,
+    end_year: item.end_year ?? null,
+    atlas_synced_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: existing, error: findError } = await supabase
+    .from("studio_collections")
+    .select("id")
+    .eq("atlas_collection_id", item.atlas_collection_id)
+    .maybeSingle();
+  if (findError) throw new Error(findError.message);
+
+  let collectionId: string;
+  let action: "created" | "updated";
+  if (existing) {
+    const { error } = await supabase
+      .from("studio_collections")
+      .update(identityFields)
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    collectionId = existing.id;
+    action = "updated";
+  } else {
+    const { data: inserted, error } = await supabase
+      .from("studio_collections")
+      .insert({
+        ...identityFields,
+        atlas_collection_id: item.atlas_collection_id,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    collectionId = inserted.id;
+    action = "created";
+  }
+
+  const { error: manifestError } = await supabase.rpc(
+    "apply_atlas_collection_manifest",
+    {
+      p_collection_id: collectionId,
+      p_art_piece_ids: orderedPieceIds,
+      p_cover_art_piece_id: coverPieceId,
+    }
+  );
+  if (manifestError) {
+    if (action === "created") {
+      await supabase
+        .from("studio_collections")
+        .delete()
+        .eq("id", collectionId);
+    }
+    throw new Error(manifestError.message);
+  }
+
+  await auditCollection(
+    supabase,
+    "atlas.collection_import",
+    item.atlas_collection_id,
+    collectionId,
+    {
+      action,
+      fields: Object.keys(identityFields),
+      artwork_count: orderedPieceIds.length,
+    },
+    false
+  );
+
+  return {
+    atlas_collection_id: item.atlas_collection_id,
+    status: action,
+    artwork_count: orderedPieceIds.length,
+  };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -464,6 +633,25 @@ async function audit(supabase: any, action: string, atlasId: string, pieceId: nu
     action,
     entity_type: "art_pieces",
     entity_id: pieceId !== null ? String(pieceId) : atlasId,
+    after,
+    denied,
+  });
+}
+
+// deno-lint-ignore no-explicit-any
+async function auditCollection(
+  supabase: any,
+  action: string,
+  atlasId: string,
+  collectionId: string | null,
+  after: unknown,
+  denied: boolean
+) {
+  await supabase.from("admin_audit_log").insert({
+    actor_collector_id: null,
+    action,
+    entity_type: "studio_collection",
+    entity_id: collectionId ?? atlasId,
     after,
     denied,
   });

@@ -57,6 +57,7 @@ function AppProviders() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="artwork/[id]" />
+            <Stack.Screen name="collection/[id]" />
           </Stack>
         </ThemeProvider>
       </PaymentProvider>
