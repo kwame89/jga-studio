@@ -4,8 +4,7 @@
 // dollar bands).
 //
 // EDIT THIS FILE to change the copy — everything here is plain text/numbers.
-// The bio and statement below are PLACEHOLDERS written in a neutral voice;
-// replace them with Jay's own words.
+// The artist statement below is Jay's own words.
 
 export type StudioSeries = {
   key: string;
@@ -24,20 +23,29 @@ export const STUDIO = {
   artistName: 'Jay Golding',
 
   // One-line positioning shown under the artist name at the top of Home.
-  tagline: 'Artist-run studio — paintings, works on paper, and experimental pieces.',
+  tagline: 'Paintings of dreams and visions — migration, heritage, and mythology.',
 
-  // Short artist statement (the "why"). 1–3 sentences reads best here.
-  // PLACEHOLDER — replace with Jay's real statement.
-  statement:
-    'JGA Studio is where I make and keep my work — an archive and a gallery in one. ' +
-    'Each piece is documented from the moment it’s made, so its story travels with it.',
-
-  // Longer bio (the "who"). A short paragraph.
-  // PLACEHOLDER — replace with Jay's real bio.
-  bio:
-    'Jay Golding is a multidisciplinary artist working across painting, illustration, ' +
-    'and mixed media. This studio brings the full body of work together in one place, ' +
-    'from finished collectible pieces to experimental studies.',
+  // Artist statement, in Jay's own words. Each string is one paragraph.
+  statement: [
+    'My art is like painting dreams or visions onto the canvas. I pull inspiration ' +
+      'from migration, the meeting of tribal cultures, my own heritage, mythology, and ' +
+      'those fleeting, in-between states of mind. Childhood memories shape the dreamlike ' +
+      'quality in some of my pieces—especially one vivid moment from when I was six, ' +
+      'living in Jamaica. I watched my uncle sketch cars straight from his imagination, ' +
+      'and something clicked. That day, I drew my first portrait, and I’ve been creating ' +
+      'ever since. It’s one of the few bright spots I held onto from my early years before ' +
+      'moving to the United States—a thread that keeps my connection to my birthplace ' +
+      'alive and untainted.',
+    'Traveling to places like Ethiopia, Ghana, and Mexico has deepened my work, too. ' +
+      'The symbols and icons from those cultures, along with my own research, show up ' +
+      'more and more in my paintings. Artists like Frida Kahlo, Caravaggio, Pablo Picasso, ' +
+      'Ernie Barnes, Andrew Wyeth, Norman Rockwell, John Singer Sargent, Paul Gauguin, ' +
+      'Van Gogh, and recently Wangechi Mutu have all left their mark on how I see and ' +
+      'make art.',
+    'No matter the subject, my aim is to capture an emotion or a raw, unguarded moment. ' +
+      'These days, I’m pushing to be more real and open in my practice—letting the viewer ' +
+      'in on something true.',
+  ],
 
   // The series breakdown Malcolm asked for: illustration → paint → experimental.
   // Order here is the order shown on Home.

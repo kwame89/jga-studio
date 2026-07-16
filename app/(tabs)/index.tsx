@@ -320,9 +320,21 @@ export default function Home() {
         <Text style={styles.tagline}>{STUDIO.tagline}</Text>
       </View>
 
+      <SectionHeader
+        title="Artist Statement"
+        subtitle={`In ${STUDIO.artistName.split(' ')[0]}’s own words`}
+        theme={theme}
+      />
+
       <View style={styles.aboutSection}>
-        <Text style={styles.statement}>{STUDIO.statement}</Text>
-        <Text style={styles.bio}>{STUDIO.bio}</Text>
+        {STUDIO.statement.map((paragraph, index) => (
+          <Text
+            key={index}
+            style={[styles.statementParagraph, index === 0 && styles.statementLead]}
+          >
+            {paragraph}
+          </Text>
+        ))}
       </View>
 
       <SectionHeader
@@ -689,19 +701,18 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
 
     aboutSection: {
       paddingHorizontal: 18,
-      marginTop: 14,
     },
-    statement: {
-      color: theme.text,
-      fontSize: 18,
-      lineHeight: 27,
-      fontWeight: '600',
-      marginBottom: 12,
-    },
-    bio: {
-      color: theme.isDark ? '#A7A2B2' : '#5C5766',
+    statementParagraph: {
+      color: theme.isDark ? '#B7B0C4' : '#4A4553',
       fontSize: 15,
-      lineHeight: 23,
+      lineHeight: 24,
+      marginBottom: 14,
+    },
+    statementLead: {
+      color: theme.text,
+      fontSize: 16,
+      lineHeight: 26,
+      fontWeight: '500',
     },
 
     seriesList: {
