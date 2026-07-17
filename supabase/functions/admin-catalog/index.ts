@@ -42,6 +42,17 @@ function getBearerToken(req: Request) {
   return header.replace(/^Bearer\s+/i, "").trim();
 }
 
+function getPrivyUserIdCandidates(userId: string) {
+  const normalized = userId.trim();
+  const unprefixed = normalized.replace(/^did:privy:/i, "");
+
+  return [...new Set([
+    normalized,
+    unprefixed,
+    unprefixed ? `did:privy:${unprefixed}` : "",
+  ])].filter(Boolean);
+}
+
 function safeErrorMessage(message: string) {
   const knownMessages = [
     "Artwork not found",
@@ -85,11 +96,12 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Invalid or expired Privy access token" }, 401);
   }
 
+  const privyUserIdCandidates = getPrivyUserIdCandidates(actorPrivyUserId);
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const { data: admin, error: adminError } = await supabase
     .from("studio_admins")
     .select("privy_user_id")
-    .eq("privy_user_id", actorPrivyUserId)
+    .in("privy_user_id", privyUserIdCandidates)
     .eq("enabled", true)
     .maybeSingle();
 
@@ -97,6 +109,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Could not verify studio admin access" }, 500);
   }
   if (!admin) {
+    console.warn("Studio admin access denied", {
+      actorPrivyUserId,
+      checkedUserIds: privyUserIdCandidates,
+    });
     return jsonResponse({ error: "Studio admin access required" }, 403);
   }
 
