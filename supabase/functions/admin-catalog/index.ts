@@ -4,7 +4,6 @@ import { verifyPrivyUser } from "../_shared/privyAuth.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PRIVY_APP_ID = Deno.env.get("PRIVY_APP_ID");
-const PRIVY_APP_SECRET = Deno.env.get("PRIVY_APP_SECRET");
 
 interface CatalogItemRow {
   id: number;
