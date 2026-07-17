@@ -15,8 +15,8 @@ export async function verifyPrivyUser(req: Request): Promise<string | null> {
   if (!token) return null;
   try {
     const privy = new PrivyClient({ appId: PRIVY_APP_ID, appSecret: PRIVY_APP_SECRET });
-    const claims = await privy.utils().auth().verifyAuthToken(token);
-    return claims.user_id ?? null;
+    const claims = await privy.utils().auth().verifyAccessToken(token);
+    return claims.userId ?? null;
   } catch {
     return null;
   }

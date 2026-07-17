@@ -6,3 +6,15 @@ verify_jwt = false
 
 [functions.admin-catalog]
 verify_jwt = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.get-order]
+verify_jwt = false
+
+[functions.submit-crypto-payment]
+verify_jwt = false
+
+[functions.confirm-crypto-payment]
+verify_jwt = false

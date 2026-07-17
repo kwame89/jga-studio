@@ -79,8 +79,8 @@ Deno.serve(async (req: Request) => {
       appId: PRIVY_APP_ID,
       appSecret: PRIVY_APP_SECRET,
     });
-    const claims = await privy.utils().auth().verifyAuthToken(token);
-    actorPrivyUserId = claims.user_id;
+    const claims = await privy.utils().auth().verifyAccessToken(token);
+    actorPrivyUserId = claims.userId;
   } catch {
     return jsonResponse({ error: "Invalid or expired Privy access token" }, 401);
   }
