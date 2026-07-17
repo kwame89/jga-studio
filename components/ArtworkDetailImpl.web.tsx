@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
+import { BuyArtworkPanel } from './BuyArtworkPanel';
 import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
 import {
   getStudioCategory,
@@ -31,6 +32,7 @@ type Artwork = {
   subject_matter?: string | null;
   tags?: string[] | null;
   created_at?: string;
+  sold_at?: string | null;
   provenance_url?: string | null;
   provenance_events?: ProvenanceEvent[] | null;
 };
@@ -173,21 +175,12 @@ export default function ArtworkDetailImpl() {
         <ProvenanceRecord events={artwork.provenance_events} />
       </View>
 
-      <View style={[styles.noticeCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <Text style={[styles.noticeTitle, { color: theme.text }]}>Checkout on Mobile</Text>
-        <Text style={[styles.noticeText, { color: theme.text }]}>
-          Artwork details are available here on web. Mobile checkout and purchase flow will be
-          available in the app experience.
-        </Text>
-
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: theme.accent }]}
-          onPress={() =>
-            alert('Mobile checkout is coming soon. You can continue browsing the collection here.')
-          }
-        >
-          <Text style={styles.buttonText}>Mobile Checkout Coming Soon</Text>
-        </TouchableOpacity>
+      <View style={styles.buySection}>
+        <BuyArtworkPanel
+          artPieceId={Number(artwork.id)}
+          priceUsd={displayPrice}
+          soldAt={artwork.sold_at}
+        />
       </View>
     </ScrollView>
   );
@@ -279,21 +272,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     marginBottom: 26,
   },
-  noticeCard: {
-    borderRadius: 6,
-    borderWidth: 1,
+  buySection: {
     marginHorizontal: 18,
-    padding: 20,
-  },
-  noticeTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  noticeText: {
-    fontSize: 15,
-    lineHeight: 24,
-    marginBottom: 16,
+    marginBottom: 26,
   },
   button: {
     marginTop: 4,
