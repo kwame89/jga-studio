@@ -260,6 +260,22 @@ export default function Home() {
           }
         />
 
+        {/* Artist spotlight leads the page so visitors meet Jay first. */}
+        <View style={styles.artistFeature}>
+          <Image
+            source={require('../../assets/jay-golding.jpeg')}
+            style={styles.artistImage}
+          />
+          <View style={styles.artistCopy}>
+            <Text style={styles.artistEyebrow}>Inside the practice</Text>
+            <Text style={styles.artistTitle}>{STUDIO.artistName}</Text>
+            <Text style={styles.artistText} numberOfLines={5}>
+              {STUDIO.statement[0]}
+            </Text>
+            <Text style={styles.artistTagline}>{STUDIO.tagline}</Text>
+          </View>
+        </View>
+
         {heroArtwork?.image_url ? (
           <Link href={`/artwork/${heroArtwork.id}`} asChild>
             <TouchableOpacity style={styles.hero} activeOpacity={0.94}>
@@ -532,21 +548,6 @@ export default function Home() {
                 </ResponsiveRail>
               </>
             ) : null}
-
-            <View style={styles.artistFeature}>
-              <Image
-                source={require('../../assets/jay-golding.jpeg')}
-                style={styles.artistImage}
-              />
-              <View style={styles.artistCopy}>
-                <Text style={styles.artistEyebrow}>Inside the practice</Text>
-                <Text style={styles.artistTitle}>{STUDIO.artistName}</Text>
-                <Text style={styles.artistText} numberOfLines={5}>
-                  {STUDIO.statement[0]}
-                </Text>
-                <Text style={styles.artistTagline}>{STUDIO.tagline}</Text>
-              </View>
-            </View>
           </>
         )}
       </View>
