@@ -16,6 +16,11 @@ export type StudioSeries = {
 export const STUDIO = {
   artistName: 'Jay Golding',
 
+  // One-line welcome shown in the Home header, orienting first-time visitors
+  // to what JGA Studio is.
+  welcome:
+    'The living archive and gallery of artist Jay Golding — every original documented, from the studio to your wall.',
+
   // One-line positioning shown under the artist name at the top of Home.
   tagline: 'Paintings of dreams and visions — migration, heritage, and mythology.',
 

@@ -260,6 +260,9 @@ export default function Home() {
           }
         />
 
+        {/* One-line welcome orienting first-time visitors to the studio. */}
+        <Text style={styles.welcomeBlurb}>{STUDIO.welcome}</Text>
+
         {/* Artist spotlight leads the page so visitors meet Jay first. */}
         <View style={styles.artistFeature}>
           <Image
@@ -1128,6 +1131,17 @@ const createStyles = (
       fontSize: 11,
       fontWeight: '700',
       lineHeight: 16,
+    },
+    welcomeBlurb: {
+      color: theme.isDark ? '#B7B0C4' : '#4A4553',
+      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
+      fontSize: desktopWeb ? 18 : 15,
+      lineHeight: desktopWeb ? 27 : 22,
+      textAlign: 'center',
+      marginTop: desktopWeb ? 26 : 18,
+      marginHorizontal: desktopWeb ? 40 : 22,
+      maxWidth: 760,
+      alignSelf: 'center',
     },
     emptyText: {
       marginHorizontal: 18,
