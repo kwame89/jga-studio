@@ -29,6 +29,14 @@ type Artwork = {
   price_usd?: number;
   description?: string;
   medium?: string;
+  dimensions?: string | null;
+  year?: number | null;
+  is_circa?: boolean | null;
+  edition_number?: number | null;
+  edition_total?: number | null;
+  condition?: string | null;
+  signed?: string | null;
+  signature_notes?: string | null;
   art_type?: string | null;
   subject_matter?: string | null;
   tags?: string[] | null;
@@ -38,6 +46,51 @@ type Artwork = {
   provenance_events?: ProvenanceEvent[] | null;
 };
 
+type GalleryImage = {
+  id: string;
+  public_url: string;
+  alt_text: string | null;
+  is_primary: boolean;
+  sort_order: number;
+};
+
+// Renders the artwork's structured detail fields, mirrored from Archive Atlas.
+function DetailRows({ artwork, theme }: { artwork: Artwork; theme: ReturnType<typeof useTheme> }) {
+  const edition =
+    artwork.edition_number && artwork.edition_total
+      ? `Edition ${artwork.edition_number} of ${artwork.edition_total}`
+      : null;
+  const yearLabel = artwork.year
+    ? `${artwork.is_circa ? 'c. ' : ''}${artwork.year}`
+    : null;
+  const signature = artwork.signature_notes || (artwork.signed ? String(artwork.signed) : null);
+
+  const rows: [string, string | null | undefined][] = [
+    ['Medium', artwork.medium],
+    ['Dimensions', artwork.dimensions],
+    ['Year', yearLabel],
+    ['Edition', edition],
+    ['Subject', artwork.subject_matter],
+    ['Condition', artwork.condition],
+    ['Signature', signature],
+  ];
+  const present = rows.filter(([, v]) => !!v);
+  if (present.length === 0) return null;
+
+  return (
+    <View style={styles.detailRows}>
+      {present.map(([label, value]) => (
+        <View key={label} style={[styles.detailRow, { borderTopColor: theme.border }]}>
+          <Text style={[styles.detailLabel, { color: theme.isDark ? '#9C9C9C' : '#6E6A75' }]}>
+            {label}
+          </Text>
+          <Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function ArtworkDetailImpl() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -46,6 +99,8 @@ export default function ArtworkDetailImpl() {
   const desktopWeb = width >= 960;
 
   const [artwork, setArtwork] = useState<Artwork | null>(null);
+  const [images, setImages] = useState<GalleryImage[]>([]);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,6 +122,16 @@ export default function ArtworkDetailImpl() {
         console.error('Error fetching artwork:', error.message);
       } else {
         setArtwork(data);
+        // Full image set (mirrored from Atlas), primary first.
+        const { data: imgs } = await supabase
+          .from('art_images')
+          .select('id, public_url, alt_text, is_primary, sort_order')
+          .eq('art_piece_id', data.id)
+          .order('is_primary', { ascending: false })
+          .order('sort_order', { ascending: true });
+        const gallery = (imgs ?? []) as GalleryImage[];
+        setImages(gallery);
+        setActiveImageId(gallery[0]?.id ?? null);
       }
     } catch (err) {
       console.error('Unexpected artwork fetch error:', err);
@@ -74,6 +139,11 @@ export default function ArtworkDetailImpl() {
       setLoading(false);
     }
   };
+
+  const activeImageUrl =
+    images.find((img) => img.id === activeImageId)?.public_url ??
+    images[0]?.public_url ??
+    artwork?.image_url;
 
   const displayPrice = artwork?.price_usd ?? artwork?.price ?? null;
   const studioCategory = artwork
@@ -140,11 +210,34 @@ export default function ArtworkDetailImpl() {
           { backgroundColor: theme.card, borderColor: theme.border },
         ]}
       >
-        <Image
-          source={{ uri: artwork.image_url }}
-          style={[styles.image, desktopWeb && styles.imageDesktop]}
-          resizeMode="contain"
-        />
+        <View style={[styles.galleryWrap, desktopWeb && styles.galleryWrapDesktop]}>
+          <Image
+            source={{ uri: activeImageUrl }}
+            style={[styles.image, desktopWeb && styles.imageDesktop]}
+            resizeMode="contain"
+          />
+          {images.length > 1 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbRow}
+            >
+              {images.map((img) => (
+                <TouchableOpacity
+                  key={img.id}
+                  activeOpacity={0.85}
+                  onPress={() => setActiveImageId(img.id)}
+                  style={[
+                    styles.thumb,
+                    { borderColor: img.id === activeImageId ? theme.accent : theme.border },
+                  ]}
+                >
+                  <Image source={{ uri: img.public_url }} style={styles.thumbImage} resizeMode="cover" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
         <View
           style={[
@@ -161,12 +254,8 @@ export default function ArtworkDetailImpl() {
           <Text style={[styles.title, { color: theme.text }]}>{artwork.title}</Text>
 
           {displayPrice !== null && displayPrice !== undefined && (
-            <Text style={[styles.price, { color: theme.accent }]}>${displayPrice}</Text>
-          )}
-
-          {!!artwork.medium && (
-            <Text style={[styles.detailText, { color: theme.text }]}>
-              Medium: {artwork.medium}
+            <Text style={[styles.price, { color: theme.accent }]}>
+              ${Number(displayPrice).toLocaleString()}
             </Text>
           )}
 
@@ -176,6 +265,7 @@ export default function ArtworkDetailImpl() {
             </Text>
           )}
 
+          <DetailRows artwork={artwork} theme={theme} />
         </View>
       </View>
 
@@ -235,13 +325,55 @@ const styles = StyleSheet.create({
   cardDesktop: {
     flexDirection: 'row',
   },
+  galleryWrap: {
+    width: '100%',
+  },
+  galleryWrapDesktop: {
+    width: '62%',
+  },
   image: {
     width: '100%',
     height: 420,
   },
   imageDesktop: {
-    width: '62%',
-    height: 680,
+    width: '100%',
+    height: 620,
+  },
+  thumbRow: {
+    gap: 8,
+    padding: 10,
+  },
+  thumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 4,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  detailRows: {
+    marginTop: 18,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    gap: 16,
+  },
+  detailLabel: {
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
+  },
+  detailValue: {
+    fontSize: 15,
+    flexShrink: 1,
+    textAlign: 'right',
   },
   metaSection: {
     padding: 20,

@@ -7,9 +7,10 @@
 //    rejected.
 //  - Single-artist guard: every item's root_artist_id must equal the
 //    ATLAS_ROOT_ARTIST_ID secret, or the item is rejected.
-//  - Identity fields only. This function NEVER writes price_usd, status,
-//    collection_type, or any commerce/auction column. New artworks land
-//    unpriced; Jay prices and publishes them in the JGA admin.
+//  - Full artwork mirror (decision 2026-07-17): identity fields + the Atlas
+//    artwork value written as price_usd, UNLESS art_pieces.price_overridden
+//    is set (admin took manual control of the price in JGA). Never writes
+//    published_at/status — the JGA publish gate is retained.
 //  - Images are COPIED into our own 'artwork' bucket (no hotlinking) and
 //    diffed by content hash on re-push. Uploads under 2000 px on the long
 //    edge are rejected per the quality gate (docs/08 §5); formats whose
@@ -140,6 +141,18 @@ function extensionFor(contentType: string): string {
   return "jpg";
 }
 
+// Fallback dimensions string from structured measurements (inches), used when
+// Atlas has no free-text dimensions but the artist entered height/width/depth.
+function formatDimensions(
+  height: number | null,
+  width: number | null,
+  depth: number | null
+): string | null {
+  const parts = [height, width, depth].filter((v): v is number => typeof v === "number" && v > 0);
+  if (parts.length < 2) return null;
+  return `${parts.join(" × ")} in`;
+}
+
 // ---------------------------------------------------------------------------
 
 interface PushedImage {
@@ -176,13 +189,22 @@ interface PushedArtwork {
   title: string;
   medium: string | null;
   dimensions: string | null;
+  height: number | null;
+  width: number | null;
+  depth: number | null;
   year: number | null;
+  is_circa: boolean | null;
   edition_number: number | null;
   edition_total: number | null;
   description: string | null;
   tags: string[];
   art_type: string | null;
   subject_matter: string | null;
+  is_signed: boolean | null;
+  signature_notes: string | null;
+  condition: string | null;
+  // Atlas artwork value doubles as the JGA sale price (decision 2026-07-17).
+  artwork_value: number | null;
   provenance_url: string;
   provenance_events: PushedProvenanceEvent[];
   images: PushedImage[];
@@ -307,22 +329,26 @@ async function importOne(supabase: any, item: PushedArtwork) {
     };
   }
 
-  // Atlas's structured dimensions arrive pre-formatted; edition info is
-  // carried in description-adjacent identity fields v1 doesn't model, so it
-  // rides along in the description block if present.
-  const editionSuffix =
-    item.edition_number && item.edition_total
-      ? `\n\nEdition ${item.edition_number} of ${item.edition_total}.`
-      : "";
+  // Full identity mirror (decision 2026-07-17). Dimensions: prefer Atlas's
+  // free-text string; otherwise format from structured height/width/depth so
+  // the field is never empty when the artist entered measurements.
   const identityFields = {
     title: item.title,
     medium: item.medium,
-    dimensions: item.dimensions,
+    dimensions: item.dimensions ?? formatDimensions(item.height, item.width, item.depth),
+    height: item.height,
+    width: item.width,
+    depth: item.depth,
     year: item.year,
-    description: item.description ? `${item.description}${editionSuffix}` : item.description,
+    is_circa: item.is_circa,
+    edition_number: item.edition_number,
+    edition_total: item.edition_total,
+    description: item.description,
     tags: Array.isArray(item.tags) ? item.tags : [],
     art_type: item.art_type,
     subject_matter: item.subject_matter,
+    signature_notes: item.signature_notes,
+    condition: item.condition,
     provenance_url: item.provenance_url,
     provenance_events: Array.isArray(item.provenance_events)
       ? item.provenance_events.slice(0, 100)
@@ -330,9 +356,15 @@ async function importOne(supabase: any, item: PushedArtwork) {
     atlas_synced_at: new Date().toISOString(),
   };
 
+  // Atlas value → sale price, unless an admin has overridden it in JGA.
+  const atlasPrice =
+    typeof item.artwork_value === "number" && item.artwork_value > 0
+      ? item.artwork_value
+      : null;
+
   const { data: existing, error: findError } = await supabase
     .from("art_pieces")
-    .select("id, title")
+    .select("id, title, price_overridden")
     .eq("atlas_artwork_id", item.atlas_artwork_id)
     .maybeSingle();
   if (findError) throw new Error(findError.message);
@@ -340,16 +372,20 @@ async function importOne(supabase: any, item: PushedArtwork) {
   let pieceId: number;
   let action: "created" | "updated";
   if (existing) {
-    const { error } = await supabase.from("art_pieces").update(identityFields).eq("id", existing.id);
+    // Only sync price when the admin hasn't taken manual control of it.
+    const update = existing.price_overridden
+      ? identityFields
+      : { ...identityFields, price_usd: atlasPrice };
+    const { error } = await supabase.from("art_pieces").update(update).eq("id", existing.id);
     if (error) throw new Error(error.message);
     pieceId = existing.id;
     action = "updated";
   } else {
-    // New pieces land unpriced and unpublished-by-default: no price_usd, no
-    // status/collection_type — commerce fields are set in the JGA admin.
+    // New pieces are priced from Atlas but stay unpublished until an admin
+    // reviews and publishes them in JGA (publish gate is retained).
     const { data: inserted, error } = await supabase
       .from("art_pieces")
-      .insert({ ...identityFields, atlas_artwork_id: item.atlas_artwork_id })
+      .insert({ ...identityFields, price_usd: atlasPrice, atlas_artwork_id: item.atlas_artwork_id })
       .select("id")
       .single();
     if (error) throw new Error(error.message);

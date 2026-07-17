@@ -230,5 +230,15 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: safeErrorMessage(error.message) }, 400);
   }
 
+  // A manual price edit takes control away from Atlas value sync: future
+  // re-pushes stop overwriting price_usd (decision 2026-07-17). publish also
+  // applies a price, so it counts as taking control too.
+  if ((action === "set_price" || action === "publish") && priceUsd !== null) {
+    await supabase
+      .from("art_pieces")
+      .update({ price_overridden: true })
+      .eq("id", artPieceId);
+  }
+
   return jsonResponse({ item: data });
 });
