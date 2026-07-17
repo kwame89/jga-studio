@@ -21,6 +21,7 @@ interface CatalogCollectionRow {
 interface CatalogMembershipRow {
   collection_id: string;
   art_piece_id: number;
+  display_order: number;
 }
 
 const corsHeaders = {
@@ -120,7 +121,7 @@ Deno.serve(async (req: Request) => {
         .order("created_at", { ascending: false }),
       supabase
         .from("studio_collection_artworks")
-        .select("collection_id, art_piece_id"),
+        .select("collection_id, art_piece_id, display_order"),
     ]);
 
     if (itemsError || collectionsError || membershipsError) {
@@ -135,10 +136,13 @@ Deno.serve(async (req: Request) => {
     const collectionRows = ((collections ?? []) as CatalogCollectionRow[]).map((collection) => {
       const collectionMemberships = membershipRows.filter(
         (membership) => membership.collection_id === collection.id
-      );
+      ).sort((a, b) => a.display_order - b.display_order);
       return {
         ...collection,
         artwork_count: collectionMemberships.length,
+        artwork_ids: collectionMemberships.map(
+          (membership) => membership.art_piece_id
+        ),
         published_artwork_count: collectionMemberships.filter(
           (membership) => Boolean(piecesById.get(membership.art_piece_id)?.published_at)
         ).length,

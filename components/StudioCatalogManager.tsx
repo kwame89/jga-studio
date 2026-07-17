@@ -33,6 +33,7 @@ type CatalogCollection = {
   cover_art_piece_id: number | null;
   cover_image_url: string | null;
   artwork_count: number;
+  artwork_ids: number[];
   published_artwork_count: number;
   published_at: string | null;
   atlas_synced_at: string | null;
@@ -65,6 +66,7 @@ export default function StudioCatalogManager({
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [busyCollectionId, setBusyCollectionId] = useState<string | null>(null);
+  const [focusedCollectionId, setFocusedCollectionId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const request = useCallback(
@@ -128,6 +130,14 @@ export default function StudioCatalogManager({
     return () => onAuthorizationChange(false);
   }, [loadCatalog, onAuthorizationChange]);
 
+  const focusedCollection =
+    collections.find((collection) => collection.id === focusedCollectionId) ?? null;
+  const visibleItems = focusedCollection
+    ? (focusedCollection.artwork_ids ?? [])
+        .map((artworkId) => items.find((item) => item.id === artworkId))
+        .filter((item): item is CatalogItem => Boolean(item))
+    : items;
+
   function parsePrice(itemId: number, requirePrice: boolean) {
     const raw = (prices[itemId] ?? '').trim();
     if (!raw && !requirePrice) return null;
@@ -157,6 +167,24 @@ export default function StudioCatalogManager({
       setItems((current) =>
         current.map((candidate) => (candidate.id === item.id ? payload.item! : candidate)),
       );
+      const wasPublished = Boolean(item.published_at);
+      const isPublished = Boolean(payload.item.published_at);
+      if (wasPublished !== isPublished) {
+        const countChange = isPublished ? 1 : -1;
+        setCollections((current) =>
+          current.map((collection) =>
+            (collection.artwork_ids ?? []).includes(item.id)
+              ? {
+                  ...collection,
+                  published_artwork_count: Math.max(
+                    0,
+                    collection.published_artwork_count + countChange,
+                  ),
+                }
+              : collection,
+          ),
+        );
+      }
       setPrices((current) => ({
         ...current,
         [item.id]: payload.item?.price_usd === null ? '' : String(payload.item?.price_usd),
@@ -265,6 +293,9 @@ export default function StudioCatalogManager({
           collections.map((collection) => {
             const isPublished = Boolean(collection.published_at);
             const isBusy = busyCollectionId === collection.id;
+            const publishBlocked =
+              !isPublished && collection.published_artwork_count === 0;
+            const isFocused = focusedCollectionId === collection.id;
             return (
               <View key={collection.id} style={styles.collectionRow}>
                 {collection.cover_image_url ? (
@@ -304,40 +335,76 @@ export default function StudioCatalogManager({
                     {collection.artwork_count} works · {collection.published_artwork_count} live
                   </Text>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.publishButton,
-                      isPublished ? styles.unpublishButton : styles.goLiveButton,
-                    ]}
-                    onPress={() =>
-                      updateCollection(
-                        collection,
-                        isPublished ? 'unpublish' : 'publish',
-                      )
-                    }
-                    disabled={isBusy}
-                  >
-                    {isBusy ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={isPublished ? theme.text : '#fff'}
-                      />
-                    ) : (
-                      <Ionicons
-                        name={isPublished ? 'eye-off-outline' : 'eye-outline'}
-                        size={17}
-                        color={isPublished ? theme.text : '#fff'}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.publishButtonText,
-                        isPublished && styles.unpublishButtonText,
-                      ]}
-                    >
-                      {isPublished ? 'Remove from Discover' : 'Publish to Discover'}
+                  {!isPublished ? (
+                    <Text style={styles.collectionGuidance}>
+                      {publishBlocked
+                        ? 'Set a price and publish at least one member work before this collection can appear on Discover.'
+                        : `Only ${collection.published_artwork_count} of ${collection.artwork_count} works will appear when this collection is published.`}
                     </Text>
-                  </TouchableOpacity>
+                  ) : null}
+
+                  <View style={styles.collectionActions}>
+                    <TouchableOpacity
+                      style={styles.outlineButton}
+                      onPress={() =>
+                        setFocusedCollectionId(isFocused ? null : collection.id)
+                      }
+                      accessibilityLabel={
+                        isFocused
+                          ? `Show all artworks instead of ${collection.title}`
+                          : `Review artworks in ${collection.title}`
+                      }
+                    >
+                      <Ionicons
+                        name={isFocused ? 'albums-outline' : 'list-outline'}
+                        size={16}
+                        color={theme.accent}
+                      />
+                      <Text style={styles.outlineButtonText}>
+                        {isFocused ? 'Show all works' : 'Review member works'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.publishButton,
+                        isPublished ? styles.unpublishButton : styles.goLiveButton,
+                        publishBlocked && styles.disabledButton,
+                      ]}
+                      onPress={() =>
+                        updateCollection(
+                          collection,
+                          isPublished ? 'unpublish' : 'publish',
+                        )
+                      }
+                      disabled={isBusy || publishBlocked}
+                    >
+                      {isBusy ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={isPublished ? theme.text : '#fff'}
+                        />
+                      ) : (
+                        <Ionicons
+                          name={isPublished ? 'eye-off-outline' : 'eye-outline'}
+                          size={17}
+                          color={isPublished ? theme.text : '#fff'}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          styles.publishButtonText,
+                          isPublished && styles.unpublishButtonText,
+                        ]}
+                      >
+                        {isPublished
+                          ? 'Remove from Discover'
+                          : publishBlocked
+                            ? 'Publish member works first'
+                            : 'Publish to Discover'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             );
@@ -347,18 +414,28 @@ export default function StudioCatalogManager({
 
       <View style={styles.subsectionHeading}>
         <View>
-          <Text style={styles.subsectionTitle}>Artwork catalog</Text>
-          <Text style={styles.subsectionCopy}>Set price and publication per work.</Text>
+          <Text style={styles.subsectionTitle}>
+            {focusedCollection ? `${focusedCollection.title} works` : 'Artwork catalog'}
+          </Text>
+          <Text style={styles.subsectionCopy}>
+            {focusedCollection
+              ? 'Set prices and publish the works that should appear in this collection.'
+              : 'Set price and publication per work.'}
+          </Text>
         </View>
-        <Text style={styles.subsectionCount}>{items.length}</Text>
+        <Text style={styles.subsectionCount}>{visibleItems.length}</Text>
       </View>
 
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <View style={styles.notice}>
-          <Text style={styles.mutedText}>No artworks have been sent from Archive Atlas yet.</Text>
+          <Text style={styles.mutedText}>
+            {focusedCollection
+              ? 'No member artworks were found for this collection.'
+              : 'No artworks have been sent from Archive Atlas yet.'}
+          </Text>
         </View>
       ) : (
-        items.map((item) => {
+        visibleItems.map((item) => {
           const isPublished = Boolean(item.published_at);
           const isBusy = busyId === item.id;
           return (
@@ -575,6 +652,16 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontSize: 12,
       marginBottom: 10,
     },
+    collectionGuidance: {
+      color: theme.text,
+      opacity: 0.76,
+      fontSize: 12,
+      lineHeight: 17,
+      marginBottom: 10,
+    },
+    collectionActions: {
+      gap: 8,
+    },
     catalogRow: {
       backgroundColor: theme.card,
       borderWidth: 1,
@@ -707,6 +794,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     goLiveButton: {
       backgroundColor: theme.accent,
+    },
+    disabledButton: {
+      opacity: 0.45,
     },
     unpublishButton: {
       backgroundColor: theme.background,
