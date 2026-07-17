@@ -7,6 +7,7 @@
 // verification ON.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { verifyPrivyUser } from "../_shared/privyAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -29,11 +30,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(token);
-    if (!user) return jsonResponse({ error: "Sign in required" }, 401);
+    const privyUserId = await verifyPrivyUser(req);
+    if (!privyUserId) return jsonResponse({ error: "Sign in required" }, 401);
 
     const body = await req.json().catch(() => null);
     const orderId = body?.orderId;
@@ -47,7 +45,7 @@ Deno.serve(async (req) => {
       .select("id, user_id, status, rail")
       .eq("id", orderId)
       .maybeSingle();
-    if (!order || order.user_id !== user.id) return jsonResponse({ error: "Order not found" }, 404);
+    if (!order || order.user_id !== privyUserId) return jsonResponse({ error: "Order not found" }, 404);
     if (order.rail !== "crypto") return jsonResponse({ error: "Not a crypto order" }, 400);
     if (order.status !== "pending_payment") {
       return jsonResponse({ error: `Order is ${order.status}` }, 409);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '../supabaseClient';
+import { usePrivy } from '../lib/privy';
+import { callCommerceFunction } from '../lib/commerceApi';
 import { useTheme } from '../themeContext';
 
 // Web-first checkout panel (docs/build-packet 1-commerce): dual rail.
@@ -50,7 +51,8 @@ export function BuyArtworkPanel({
   const router = useRouter();
   const styles = createStyles(theme);
 
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const { user, isReady, getAccessToken } = usePrivy();
+  const signedIn = isReady ? !!user : null;
   const [name, setName] = useState('');
   const [line1, setLine1] = useState('');
   const [line2, setLine2] = useState('');
@@ -64,14 +66,6 @@ export function BuyArtworkPanel({
   const [cryptoStatus, setCryptoStatus] = useState('');
   const [checking, setChecking] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) =>
-      setSignedIn(!!session)
-    );
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
   const addressComplete = useMemo(
     () => [name, line1, city, state, zip].every((v) => v.trim().length > 0),
     [name, line1, city, state, zip]
@@ -81,27 +75,13 @@ export function BuyArtworkPanel({
     setError('');
     setBusyRail(rail);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('create-order', {
-        body: {
-          artPieceId,
-          rail,
-          shipping: { name, line1, line2: line2 || undefined, city, state, zip },
-        },
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error('Please sign in again to purchase.');
+      const data = await callCommerceFunction<Quote & { url?: string }>('create-order', accessToken, {
+        artPieceId,
+        rail,
+        shipping: { name, line1, line2: line2 || undefined, city, state, zip },
       });
-      if (fnError) {
-        let message = fnError.message ?? 'Could not start checkout';
-        const context = (fnError as { context?: Response }).context;
-        if (context) {
-          try {
-            const body = await context.json();
-            if (body?.error) message = body.error;
-          } catch {
-            // keep generic message
-          }
-        }
-        throw new Error(message);
-      }
-      if (data?.error) throw new Error(data.error);
 
       if (rail === 'stripe') {
         if (!data?.url) throw new Error('Stripe did not return a checkout link');
@@ -127,21 +107,19 @@ export function BuyArtworkPanel({
     setChecking(true);
     setCryptoStatus('');
     try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error('Please sign in again to continue.');
       if (txHash.trim()) {
-        const { data, error: fnError } = await supabase.functions.invoke('submit-crypto-payment', {
-          body: { orderId: cryptoQuote.orderId, txHash: txHash.trim() },
+        await callCommerceFunction('submit-crypto-payment', accessToken, {
+          orderId: cryptoQuote.orderId,
+          txHash: txHash.trim(),
         });
-        if (fnError || data?.error) {
-          throw new Error(data?.error ?? fnError?.message ?? 'Could not record transaction');
-        }
       }
-      const { data: confirm, error: confirmError } = await supabase.functions.invoke(
+      const confirm = await callCommerceFunction<{ status: string; reason?: string }>(
         'confirm-crypto-payment',
-        { body: { orderId: cryptoQuote.orderId } }
+        accessToken,
+        { orderId: cryptoQuote.orderId }
       );
-      if (confirmError || confirm?.error) {
-        throw new Error(confirm?.error ?? confirmError?.message ?? 'Could not verify payment');
-      }
       if (confirm.status === 'confirmed') {
         router.push(`/checkout/success?order=${cryptoQuote.orderId}`);
         return;

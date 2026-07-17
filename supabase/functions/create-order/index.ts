@@ -22,6 +22,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14";
+import { verifyPrivyUser } from "../_shared/privyAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -68,14 +69,9 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // --- Buyer auth ---------------------------------------------------------
-    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-    if (!token) return jsonResponse({ error: "Sign in to purchase" }, 401);
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(token);
-    if (userError || !user) return jsonResponse({ error: "Sign in to purchase" }, 401);
+    // --- Buyer auth: the app signs users in with Privy (see _shared/privyAuth)
+    const privyUserId = await verifyPrivyUser(req);
+    if (!privyUserId) return jsonResponse({ error: "Sign in to purchase" }, 401);
 
     // --- Input --------------------------------------------------------------
     const body = await req.json().catch(() => null);
@@ -129,8 +125,7 @@ Deno.serve(async (req) => {
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        user_id: user.id,
-        email: user.email,
+        user_id: privyUserId,
         art_piece_id: artPieceId,
         rail,
         subtotal_cents: subtotalCents,
@@ -170,7 +165,6 @@ Deno.serve(async (req) => {
         ],
         client_reference_id: order.id,
         metadata: { order_id: order.id, art_piece_id: String(artPieceId) },
-        customer_email: user.email ?? undefined,
         expires_at: Math.floor(Date.now() / 1000) + HOLD_MINUTES * 60,
         success_url: `${SITE_URL}/checkout/success?order=${order.id}`,
         cancel_url: `${SITE_URL}/checkout/cancelled?order=${order.id}`,

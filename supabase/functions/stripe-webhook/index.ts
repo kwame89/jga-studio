@@ -95,7 +95,13 @@ Deno.serve(async (req) => {
           .eq("rail", "stripe");
         await supabase
           .from("orders")
-          .update({ status: "paid", updated_at: new Date().toISOString() })
+          .update({
+            status: "paid",
+            // Buyers authenticate with Privy (no email in the token), so the
+            // receipt email comes from Stripe's own collection at checkout.
+            email: session.customer_details?.email ?? null,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", orderId);
         await supabase
           .from("art_pieces")

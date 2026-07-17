@@ -1,48 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { supabase } from '../../supabaseClient';
+import { usePrivy } from '../../lib/privy';
+import { callCommerceFunction } from '../../lib/commerceApi';
 import { useTheme } from '../../themeContext';
 
 // Landing page after payment (Stripe redirect or crypto confirmation).
 // Stripe's webhook may land a few seconds after the redirect, so this page
-// polls the order (readable via own-row RLS) until it flips to paid.
+// polls get-order (Privy-verified; orders have no client-readable RLS)
+// until the status flips to paid.
 
 export default function CheckoutSuccess() {
   const { order } = useLocalSearchParams<{ order?: string }>();
   const router = useRouter();
   const theme = useTheme();
+  const { user, isReady, getAccessToken } = usePrivy();
 
   const [status, setStatus] = useState<string | null>(null);
   const [title, setTitle] = useState<string>('');
 
   useEffect(() => {
-    if (!order) return;
+    if (!order || !isReady || !user) return;
     let cancelled = false;
     let attempts = 0;
 
     async function poll() {
       attempts += 1;
-      const { data } = await supabase
-        .from('orders')
-        .select('status, art_piece_id')
-        .eq('id', order)
-        .maybeSingle();
-      if (cancelled) return;
-      if (data) {
+      try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) throw new Error('no token');
+        const data = await callCommerceFunction<{ status: string; title: string | null }>(
+          'get-order',
+          accessToken,
+          { orderId: order }
+        );
+        if (cancelled) return;
         setStatus(data.status);
-        if (!title) {
-          const { data: piece } = await supabase
-            .from('art_pieces')
-            .select('title')
-            .eq('id', data.art_piece_id)
-            .maybeSingle();
-          if (piece && !cancelled) setTitle(piece.title);
-        }
+        if (data.title) setTitle(data.title);
         if (data.status === 'paid' || attempts >= 15) return;
-      } else if (attempts >= 15) {
-        setStatus('unknown');
-        return;
+      } catch {
+        if (cancelled) return;
+        if (attempts >= 15) {
+          setStatus('unknown');
+          return;
+        }
       }
       setTimeout(poll, 2000);
     }
@@ -51,7 +52,7 @@ export default function CheckoutSuccess() {
     return () => {
       cancelled = true;
     };
-  }, [order]);
+  }, [order, isReady, user]);
 
   const paid = status === 'paid' || status === 'preparing' || status === 'shipped';
 

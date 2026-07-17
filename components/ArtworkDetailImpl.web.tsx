@@ -14,6 +14,7 @@ import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
 import { BuyArtworkPanel } from './BuyArtworkPanel';
+import { AdminArtworkControls } from './AdminArtworkControls';
 import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
 import {
   getStudioCategory,
@@ -98,6 +99,13 @@ export default function ArtworkDetailImpl() {
           This work could not be loaded right now.
         </Text>
 
+        {/* Admins see draft controls here: an unpublished piece resolves to
+            not-found for collectors, but its owner can price + publish it
+            from this very URL. Self-hides for everyone else. */}
+        <View style={styles.notFoundAdmin}>
+          <AdminArtworkControls artPieceId={Number(id)} onChanged={fetchArtwork} />
+        </View>
+
         <TouchableOpacity
           style={[styles.button, { backgroundColor: theme.accent }]}
           onPress={() => router.back()}
@@ -173,6 +181,10 @@ export default function ArtworkDetailImpl() {
 
       <View style={styles.provenanceSection}>
         <ProvenanceRecord events={artwork.provenance_events} />
+      </View>
+
+      <View style={styles.adminSection}>
+        <AdminArtworkControls artPieceId={Number(artwork.id)} onChanged={fetchArtwork} />
       </View>
 
       <View style={styles.buySection}>
@@ -271,6 +283,15 @@ const styles = StyleSheet.create({
   provenanceSection: {
     marginHorizontal: 18,
     marginBottom: 26,
+  },
+  adminSection: {
+    marginHorizontal: 18,
+    marginBottom: 18,
+  },
+  notFoundAdmin: {
+    width: '100%',
+    maxWidth: 560,
+    marginBottom: 16,
   },
   buySection: {
     marginHorizontal: 18,
