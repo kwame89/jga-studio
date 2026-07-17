@@ -290,6 +290,9 @@ export default function Profile() {
   const [emailInput, setEmailInput] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   const [receiveModalVisible, setReceiveModalVisible] = useState(false);
   const [sendModalVisible, setSendModalVisible] = useState(false);
@@ -710,57 +713,73 @@ export default function Profile() {
   };
 
   const handleSendCode = async () => {
+    setAuthError(null);
+    setAuthMessage(null);
+
+    if (isSignedIn) {
+      setAuthError('A Privy session already exists. Sign out before using another email.');
+      return;
+    }
+
+    if (!emailInput.trim()) {
+      setAuthError('Enter your email address first.');
+      return;
+    }
+
+    setAuthBusy(true);
+
     try {
-      if (isSignedIn) {
-        Alert.alert(
-          'Already signed in',
-          'A Privy session already exists on this device. Use Sign Out first if you want to log in with a different email.'
-        );
-        return;
-      }
-
-      if (!emailInput.trim()) {
-        Alert.alert('Email required', 'Enter your email address first.');
-        return;
-      }
-
       await sendCode({ email: emailInput.trim() });
       setCodeSent(true);
-      Alert.alert('Code sent', 'Check your email for the login code.');
+      setAuthMessage('Login code sent. Check your email, then enter it below.');
+
+      if (Platform.OS !== 'web') {
+        Alert.alert('Code sent', 'Check your email for the login code.');
+      }
     } catch (error: any) {
       console.error(error);
-      Alert.alert('Login error', error?.message || 'Could not send code.');
+      setAuthError(error?.message || 'Could not send the login code. Please try again.');
+    } finally {
+      setAuthBusy(false);
     }
   };
 
   const handleLogin = async () => {
+    setAuthError(null);
+    setAuthMessage(null);
+
+    if (isSignedIn) {
+      setAuthError('You already have an active Privy session.');
+      return;
+    }
+
+    if (!emailInput.trim() || !code.trim()) {
+      setAuthError('Enter both your email address and login code.');
+      return;
+    }
+
+    setAuthBusy(true);
+
     try {
-      if (isSignedIn) {
-        Alert.alert(
-          'Already signed in',
-          'You already have an active Privy session. Use Sign Out first if needed.'
-        );
-        return;
-      }
-
-      if (!emailInput.trim() || !code.trim()) {
-        Alert.alert('Missing fields', 'Enter both email and code.');
-        return;
-      }
-
       await loginWithCode({
         email: emailInput.trim(),
         code: code.trim(),
       });
 
       setCode('');
-      Alert.alert(
-        'Signed in',
-        'Login succeeded. You can now create your embedded wallet.'
-      );
+      setAuthMessage('Signed in successfully. Your collector tools are ready.');
+
+      if (Platform.OS !== 'web') {
+        Alert.alert(
+          'Signed in',
+          'Login succeeded. You can now create your embedded wallet.'
+        );
+      }
     } catch (error: any) {
       console.error(error);
-      Alert.alert('Login error', error?.message || 'Could not complete login.');
+      setAuthError(error?.message || 'Could not complete login. Please try again.');
+    } finally {
+      setAuthBusy(false);
     }
   };
 
@@ -1217,7 +1236,11 @@ const handleQrScanned = ({ data }: { data: string }) => {
               <>
                 <TextInput
                   value={emailInput}
-                  onChangeText={setEmailInput}
+                  onChangeText={(value) => {
+                    setEmailInput(value);
+                    setAuthError(null);
+                    setAuthMessage(null);
+                  }}
                   placeholder="Email address"
                   placeholderTextColor={theme.isDark ? '#8f8f8f' : '#8a8a8a'}
                   autoCapitalize="none"
@@ -1228,7 +1251,11 @@ const handleQrScanned = ({ data }: { data: string }) => {
                 {codeSent && (
                   <TextInput
                     value={code}
-                    onChangeText={setCode}
+                    onChangeText={(value) => {
+                      setCode(value);
+                      setAuthError(null);
+                      setAuthMessage(null);
+                    }}
                     placeholder="Login code"
                     placeholderTextColor={theme.isDark ? '#8f8f8f' : '#8a8a8a'}
                     autoCapitalize="none"
@@ -1236,13 +1263,43 @@ const handleQrScanned = ({ data }: { data: string }) => {
                   />
                 )}
 
+                {authError ? (
+                  <View style={[styles.authNotice, styles.authErrorNotice]}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+                    <Text style={styles.authErrorText}>{authError}</Text>
+                  </View>
+                ) : null}
+
+                {authMessage ? (
+                  <View style={[styles.authNotice, styles.authSuccessNotice]}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#177245" />
+                    <Text style={styles.authSuccessText}>{authMessage}</Text>
+                  </View>
+                ) : null}
+
                 {!codeSent ? (
-                  <TouchableOpacity style={styles.primaryButton} onPress={handleSendCode}>
-                    <Text style={styles.primaryButtonText}>Send Login Code</Text>
+                  <TouchableOpacity
+                    style={[styles.primaryButton, authBusy && styles.buttonDisabled]}
+                    onPress={handleSendCode}
+                    disabled={authBusy}
+                  >
+                    {authBusy ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Send Login Code</Text>
+                    )}
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-                    <Text style={styles.primaryButtonText}>Verify & Sign In</Text>
+                  <TouchableOpacity
+                    style={[styles.primaryButton, authBusy && styles.buttonDisabled]}
+                    onPress={handleLogin}
+                    disabled={authBusy}
+                  >
+                    {authBusy ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Verify & Sign In</Text>
+                    )}
                   </TouchableOpacity>
                 )}
               </>
@@ -2503,6 +2560,41 @@ const createStyles = (theme: any, desktopWeb = false) =>
       marginBottom: 10,
     },
 
+    authNotice: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      borderWidth: 1,
+      borderRadius: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 10,
+    },
+
+    authErrorNotice: {
+      backgroundColor: theme.isDark ? '#2B1717' : '#FFF4F2',
+      borderColor: theme.isDark ? '#6B2924' : '#F5C4BE',
+    },
+
+    authSuccessNotice: {
+      backgroundColor: theme.isDark ? '#14251D' : '#F0FAF5',
+      borderColor: theme.isDark ? '#28583D' : '#B9E2CE',
+    },
+
+    authErrorText: {
+      color: theme.isDark ? '#FFB4AB' : '#B42318',
+      fontSize: 13,
+      lineHeight: 18,
+      flex: 1,
+    },
+
+    authSuccessText: {
+      color: theme.isDark ? '#8BDEB3' : '#177245',
+      fontSize: 13,
+      lineHeight: 18,
+      flex: 1,
+    },
+
     sendLabel: {
       color: theme.text,
       fontWeight: '700',
@@ -2736,6 +2828,10 @@ const createStyles = (theme: any, desktopWeb = false) =>
       paddingVertical: 12,
       borderRadius: 4,
       alignItems: 'center',
+    },
+
+    buttonDisabled: {
+      opacity: 0.62,
     },
 
     primaryButtonInline: {
