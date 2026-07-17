@@ -851,41 +851,59 @@ export default function Profile() {
     }
   };
 
+  const performLogout = async () => {
+    setAuthBusy(true);
+    setAuthError(null);
+    setAuthMessage(null);
+
+    try {
+      await logout();
+      setCode('');
+      setCodeSent(false);
+      setEmailInput('');
+      setReceiveModalVisible(false);
+      setSendModalVisible(false);
+      setQrScannerVisible(false);
+      setHasScannedQr(false);
+      setTokenBalances({
+        ETH: null,
+        USDC: null,
+        JGA: null,
+        ZORA: null,
+      });
+      setSavedWalletRecord(null);
+      setRewardEvents([]);
+      setSendTo('');
+      setSendAmount('');
+      setSelectedSendToken('ETH');
+      setLastTxHash(null);
+      setTxHistory([]);
+      setTxHistoryError(null);
+      setAuthMessage('Signed out. You can now continue with another email address.');
+    } catch (error: any) {
+      console.error(error);
+      setAuthError(error?.message || 'Could not sign out. Please try again.');
+
+      if (Platform.OS !== 'web') {
+        Alert.alert('Error', 'Could not sign out.');
+      }
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
   const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      await performLogout();
+      return;
+    }
+
     Alert.alert('Sign Out', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-            setCode('');
-            setCodeSent(false);
-            setEmailInput('');
-            setReceiveModalVisible(false);
-            setSendModalVisible(false);
-            setQrScannerVisible(false);
-            setHasScannedQr(false);
-            setTokenBalances({
-              ETH: null,
-              USDC: null,
-              JGA: null,
-              ZORA: null,
-            });
-            setSavedWalletRecord(null);
-            setRewardEvents([]);
-            setSendTo('');
-            setSendAmount('');
-            setSelectedSendToken('ETH');
-            setLastTxHash(null);
-            setTxHistory([]);
-            setTxHistoryError(null);
-          } catch (e) {
-            console.error(e);
-            Alert.alert('Error', 'Could not sign out.');
-          }
-        },
+        onPress: performLogout,
       },
     ]);
   };
@@ -1228,9 +1246,24 @@ const handleQrScanned = ({ data }: { data: string }) => {
                   <Text style={styles.secondaryButtonText}>View Account Status</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.signOutInline} onPress={handleLogout}>
-                  <Text style={styles.signOutInlineText}>Sign Out</Text>
+                <TouchableOpacity
+                  style={[styles.signOutInline, authBusy && styles.buttonDisabled]}
+                  onPress={handleLogout}
+                  disabled={authBusy}
+                >
+                  {authBusy ? (
+                    <ActivityIndicator size="small" color="#ff4444" />
+                  ) : (
+                    <Text style={styles.signOutInlineText}>Sign Out</Text>
+                  )}
                 </TouchableOpacity>
+
+                {authError ? (
+                  <View style={[styles.authNotice, styles.authErrorNotice]}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B42318" />
+                    <Text style={styles.authErrorText}>{authError}</Text>
+                  </View>
+                ) : null}
               </>
             ) : (
               <>
@@ -1747,8 +1780,16 @@ const handleQrScanned = ({ data }: { data: string }) => {
         </Section>
 
         {isSignedIn && (
-          <TouchableOpacity style={styles.signOut} onPress={handleLogout}>
-            <Text style={styles.signOutText}>Sign Out</Text>
+          <TouchableOpacity
+            style={[styles.signOut, authBusy && styles.buttonDisabled]}
+            onPress={handleLogout}
+            disabled={authBusy}
+          >
+            {authBusy ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.signOutText}>Sign Out</Text>
+            )}
           </TouchableOpacity>
         )}
         </View>
