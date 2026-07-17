@@ -28,6 +28,21 @@ exception when duplicate_object then null; end $$;
 
 alter table art_pieces add column if not exists sold_at timestamptz;
 
+-- The v1 database may carry a vestigial 'orders' table from early Stripe
+-- experiments (bigint id, never referenced by app code). It is incompatible
+-- with the uuid schema below, so move it aside non-destructively.
+do $$
+declare
+  orders_id_type text;
+begin
+  select data_type into orders_id_type
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'orders' and column_name = 'id';
+  if orders_id_type is not null and orders_id_type <> 'uuid' then
+    alter table orders rename to orders_legacy_v1;
+  end if;
+end $$;
+
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id),
