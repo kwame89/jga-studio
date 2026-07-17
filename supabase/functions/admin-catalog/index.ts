@@ -1,5 +1,5 @@
-import { PrivyClient } from "npm:@privy-io/node@0.26.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { verifyPrivyUser } from "../_shared/privyAuth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -75,24 +75,13 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "GET" && req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
-  if (!PRIVY_APP_ID || !PRIVY_APP_SECRET) {
+  if (!PRIVY_APP_ID) {
     return jsonResponse({ error: "Studio admin authentication is not configured" }, 503);
   }
 
-  const token = getBearerToken(req);
-  if (!token) {
-    return jsonResponse({ error: "Missing Privy access token" }, 401);
-  }
-
-  let actorPrivyUserId: string;
-  try {
-    const privy = new PrivyClient({
-      appId: PRIVY_APP_ID,
-      appSecret: PRIVY_APP_SECRET,
-    });
-    const claims = await privy.utils().auth().verifyAccessToken(token);
-    actorPrivyUserId = claims.userId;
-  } catch {
+  // Offline JWKS verification of the Privy access token (see _shared/privyAuth).
+  const actorPrivyUserId = await verifyPrivyUser(req);
+  if (!actorPrivyUserId) {
     return jsonResponse({ error: "Invalid or expired Privy access token" }, 401);
   }
 
