@@ -123,6 +123,42 @@ $JGA is not equity, not revenue share, and the UI never presents it as an
 investment — copy in the app must say "collector rewards," not anything
 implying financial return.
 
+## 7a. Implementation status (audited 2026-07-18)
+
+The spec above is **not yet wired up**. What is actually true in the code:
+
+| Piece | State |
+|---|---|
+| `claim-rewards` Edge Function | **Exists** — viem `transfer`, signs with the `TREASURY_PRIVATE_KEY` secret |
+| `reward_events` / `reward_claims` / `collector_wallets` tables | **Exist in the live DB, but no migration creates them** — the repo cannot rebuild a fresh environment. Needs a catch-up migration. |
+| Accrual on a sale | **Missing.** `stripe-webhook`, `confirm-crypto-payment`, `create-order` and `submit-crypto-payment` contain no reward logic, so a paid order writes no `reward_events` and every claim finds a zero balance. This is the blocker, not the transfer. |
+| Claimable-at-`shipped` gate (§4), 100 $JGA minimum and one-claim-in-flight (§5) | Unverified against `claim-rewards` |
+
+**Privy's role, for the record:** Privy authenticates collectors and issues
+embedded wallets — it is the *destination* of a reward and nothing more. It
+has no custody of, and no signing power over, the treasury or rewards
+wallets, so no Privy dashboard setting can cause tokens to be sent. Every
+transfer is signed by our own backend.
+
+### Decisions (2026-07-18)
+
+- **Custody: hot/cold split, raw key retained.** Keep the viem +
+  Supabase-secret signer, but hold the bulk of the float in a cold wallet
+  and leave only a small working balance in the hot signing wallet, topped
+  up manually. A leaked secret then costs the working balance, not the
+  whole float.
+- **Delivery: auto-created Privy embedded wallets.** Every collector gets
+  one at signup, so card buyers with no crypto knowledge still accrue and
+  can claim.
+- **Sequencing: accrual is built after the end-to-end checkout test.**
+  Accrual cannot be exercised until an order can actually reach `paid`.
+
+**Open action:** confirm which address `TREASURY_PRIVATE_KEY` corresponds
+to. §1 requires claims to be paid from the **rewards** wallet
+(`0xf840…a7af`, 8,000,000 $JGA); if the secret holds the treasury key
+(`0x30c9…a946`, 15,000,000 $JGA as of 2026-07-18) the float is bypassed and
+the wrong wallet is drained.
+
 ## 8. Open questions
 
 - Earn-rate review cadence — rates are config, but who signs off changes?
