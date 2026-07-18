@@ -265,10 +265,14 @@ export default function Home() {
 
         {/* Artist spotlight leads the page so visitors meet Jay first. */}
         <View style={styles.artistFeature}>
-          <Image
-            source={require('../../assets/jay-golding.jpeg')}
-            style={styles.artistImage}
-          />
+          {/* aspectRatio must live on a wrapper View — RNW ignores it on
+              Image and falls back to the file's intrinsic height. */}
+          <View style={styles.artistImageFrame}>
+            <Image
+              source={require('../../assets/jay-golding.jpeg')}
+              style={styles.artistImage}
+            />
+          </View>
           <View style={styles.artistCopy}>
             <Text style={styles.artistEyebrow}>Inside the practice</Text>
             <Text style={styles.artistTitle}>{STUDIO.artistName}</Text>
@@ -1098,12 +1102,19 @@ const createStyles = (
       borderTopWidth: 1,
       borderTopColor: '#2A1E34',
     },
-    artistImage: {
+    artistImageFrame: {
       width:
         desktopWeb || viewportWidth >= 580 ? '42%' : '100%',
-      // Matches the 4:3 crop of the studio portrait, so the frame never
-      // crops into Jay's face (high in frame) or the painting beside him.
+      // 4:3 matches the studio portrait's crop, so nothing is cut off.
+      // alignSelf stops the flex row from stretching this to the height of
+      // the text column beside it.
       aspectRatio: 1.33,
+      alignSelf: 'flex-start',
+      overflow: 'hidden',
+    },
+    artistImage: {
+      width: '100%',
+      height: '100%',
       resizeMode: 'cover',
     },
     artistCopy: {
