@@ -109,6 +109,61 @@ Deno.serve(async (req) => {
       })
     }
 
+    // --- payout caps ---------------------------------------------------------
+    // The signer is a hot wallet reachable through a public HTTP endpoint, so
+    // a bug or an abusive caller could otherwise drain the whole float in a
+    // loop. These bound the damage: a single claim is limited, and total
+    // payouts across all collectors are limited over a rolling 24h.
+    //
+    // Both are env-tunable so the ceiling can be raised without a deploy.
+    // Defaults assume the current 500k float — the daily cap is deliberately
+    // well under it, so draining takes days rather than seconds and there is
+    // time to notice.
+    //
+    // NOTE: this is a check-then-act, so two simultaneous claims could each
+    // pass and jointly exceed the daily cap. Closing that properly needs a DB
+    // constraint or an advisory lock around the claim. At these volumes the
+    // window is not worth the complexity, but it is a real gap, not an
+    // oversight.
+    const maxPerClaim = Number(Deno.env.get('REWARDS_MAX_PER_CLAIM') ?? 50_000)
+    const maxPerDay = Number(Deno.env.get('REWARDS_MAX_PER_DAY') ?? 150_000)
+
+    if (total > maxPerClaim) {
+      console.warn(
+        `claim-rewards: claim of ${total} exceeds per-claim cap ${maxPerClaim}`
+      )
+      return jsonError(
+        `Claims are limited to ${maxPerClaim.toLocaleString()} $JGA at a time. ` +
+          `Please contact the studio to release a larger balance.`,
+        429
+      )
+    }
+
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: recentClaims, error: recentError } = await supabase
+      .from('reward_events')
+      .select('reward_amount')
+      .eq('status', 'claimed')
+      .gte('claimed_at', since)
+
+    if (recentError) throw recentError
+
+    const paidLast24h = (recentClaims || []).reduce(
+      (sum, row) => sum + Number(row.reward_amount || 0),
+      0
+    )
+
+    if (paidLast24h + total > maxPerDay) {
+      console.error(
+        `claim-rewards: daily cap reached — ${paidLast24h} paid in 24h, ` +
+          `claim of ${total} would exceed ${maxPerDay}`
+      )
+      return jsonError(
+        'The daily reward limit has been reached. Please try again tomorrow.',
+        429
+      )
+    }
+
     // The signer is a dedicated hot wallet holding a working float — NOT the
     // studio treasury, which is a passkey-controlled Base App account with no
     // exportable key. REWARDS_SIGNER_PRIVATE_KEY is the accurate name;
