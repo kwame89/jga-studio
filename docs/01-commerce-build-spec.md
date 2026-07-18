@@ -203,6 +203,31 @@ Buyer pays shipping; rates come from the `shipping_rates` config table
   above).
 - *Not tax advice — have the studio's accountant confirm the treatment,
   particularly shipping taxability and any resale/exemption cases.*
+
+**Unvetted as of 2026-07-18 — treat the rates above as a working assumption,
+not a decision.** They were researched, not professionally confirmed, and
+collecting the wrong amount is a real liability in both directions
+(under-collecting becomes the studio's own debt; over-collecting is charging
+buyers tax that was never owed). Specific questions for the accountant:
+
+1. **Nexus.** Does the studio have NJ physical nexus, and is it registered
+   with NJ Division of Revenue to collect? Collecting tax without
+   registration is its own problem.
+2. **Shipping.** Confirm NJ taxes delivery charges on taxable tangible
+   personal property — this doc asserts it, and it changes `tax_cents` on
+   every NJ order.
+3. **Artwork treatment.** Confirm original artwork is ordinary taxable
+   tangible personal property in NJ, with no artist or fine-art carve-out.
+4. **Resale/exemption.** How to handle a gallery or dealer buying to
+   resell (NJ ST-3 resale certificate) — beta 2 has no exemption path at
+   all, so an exempt buyer is currently overcharged with no way to fix it.
+5. **Out-of-state.** Confirm no collection obligation elsewhere yet, and
+   the economic-nexus thresholds that would trigger one.
+6. **Seller of record.** Confirm Stripe does not act as a marketplace
+   facilitator here and the studio remains liable for remittance.
+
+Blocking for taking real money from NJ buyers; not blocking for the Stripe
+**test-mode** end-to-end run.
 - Treasury for crypto payments:
   `0x30c92610f22203a728f4762e40d23a652feba946` (verified EIP-7702 smart
   wallet on Base, funded with ETH for gas — verified 2026-07-15). Crypto

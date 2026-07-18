@@ -123,6 +123,39 @@ $JGA is not equity, not revenue share, and the UI never presents it as an
 investment — copy in the app must say "collector rewards," not anything
 implying financial return.
 
+## 1a. Float runway (modeled 2026-07-18)
+
+§1 gates the low-balance alert on "30 days of projected claims" without
+anywhere defining that projection. Working it out from the live catalog:
+
+| Input | Value |
+|---|---|
+| Priced works in catalog | 10 |
+| Total catalog value | $10,975 |
+| Average price | $1,098 |
+| Earn rate | 10 $JGA per $1 of subtotal |
+| Float | 8,000,000 $JGA |
+
+- **Selling the entire priced catalog** accrues 109,750 $JGA — **1.4% of
+  the float.**
+- Exhausting the float takes **~729 sales at the current average**, or
+  **$800,000 of subtotal** at the launch rate.
+
+**The float is not a beta constraint, and "claims paused" cannot plausibly
+surprise an early collector** — the studio would have to 70x its entire
+catalog first. The auction bonus (+25%) and participation grants (25 $JGA
+per contested lot) do not move this materially at beta volumes.
+
+The finding this inverts into: **8,000,000 $JGA (0.8% of supply) is sitting
+in a hot wallet to cover what beta will actually consume — order 100k.**
+That is ~70x over-provisioned in the exact wallet whose key lives in an
+environment variable. It is the concrete argument for the hot/cold split in
+§7a: hold ~250k in the hot signing wallet (still ~2x the whole catalog) and
+move the rest cold. Same runway, ~3% of the exposure.
+
+Recompute this when the catalog or the earn rate changes; the numbers above
+are only as current as the 10 priced works behind them.
+
 ## 7a. Implementation status (audited 2026-07-18)
 
 The spec above is **not yet wired up**. What is actually true in the code:

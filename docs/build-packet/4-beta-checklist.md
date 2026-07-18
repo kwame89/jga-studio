@@ -18,10 +18,18 @@ inert or manual — never silently broken.
 - [ ] `webhook_events` idempotency on every handler
 - [ ] Auto-complete orders 30 days after delivered
 
+- [ ] **Sales tax vetted by the studio's accountant** before any live NJ
+      charge — nexus/registration, shipping taxability, resale exemptions
+      (01 §7). Rates are currently researched, not confirmed.
+
 **Auth**
 - [ ] Privy login + embedded wallets; `sync-user` upsert
 - [ ] Multi-wallet linking, single primary
 - [ ] `user_roles` admin gating on every `admin-*` function (denials logged)
+- [ ] **Decommission the `studio_admins` bridge** in the same commit that
+      moves `admin-catalog` to `user_roles` — replace the check, never OR
+      the two, then verify no reference survives and drop the table
+      (02 §4). Two live authorization paths is the escalation window.
 - [ ] RLS: public catalog reads only; reserve column excluded via view; bids masked via view; own-row `notification_preferences`
 
 **Auctions**

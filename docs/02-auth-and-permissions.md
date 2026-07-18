@@ -68,6 +68,25 @@ Edge Function verifies the Privy access token and checks that allowlist before
 calling the transactional catalog RPC. `collector_wallets.is_admin` and any
 client-visible email check are explicitly non-authoritative.
 
+**Decommissioning the bridge (required, not optional).** The allowlist is
+safe *today* precisely because it is the only path: one server-side check,
+no client input. The risk is the transition. When `user_roles` ships:
+
+1. Migrate `admin-catalog` to the `user_roles` check in the same commit that
+   removes the `studio_admins` check. **Never accept both** — an
+   `is_studio_admin(x) OR has_role(x,'admin')` shape means revoking someone
+   in `user_roles` silently leaves them an admin, which is the
+   privilege-escalation bug this whole section exists to prevent.
+2. Confirm no other function, RPC, or RLS policy still references
+   `studio_admins` (`grep -rn studio_admins supabase/` must return only the
+   drop migration).
+3. Drop `studio_admins` and its RPC parameters in a migration, after
+   verifying the current allowlist members exist in `user_roles` — dropping
+   first would lock the studio out of its own catalog.
+
+Until all three are done, the bridge is live and `user_roles` is not the
+authority, whatever the rest of this document says.
+
 ## 5. Which writes must go through Edge Functions
 
 **All of them, with one exception.**
