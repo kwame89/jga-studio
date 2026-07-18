@@ -196,6 +196,7 @@ interface PushedArtwork {
   is_circa: boolean | null;
   edition_number: number | null;
   edition_total: number | null;
+  classification: string | null;
   description: string | null;
   tags: string[];
   art_type: string | null;
@@ -343,6 +344,7 @@ async function importOne(supabase: any, item: PushedArtwork) {
     is_circa: item.is_circa,
     edition_number: item.edition_number,
     edition_total: item.edition_total,
+    classification: item.classification ?? null,
     description: item.description,
     tags: Array.isArray(item.tags) ? item.tags : [],
     art_type: item.art_type,

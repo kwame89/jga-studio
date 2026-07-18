@@ -17,6 +17,7 @@ import { BuyArtworkPanel } from './BuyArtworkPanel';
 import { AdminArtworkControls } from './AdminArtworkControls';
 import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
 import { useGoBack } from '../lib/useGoBack';
+import { formatEditionLabel } from '../lib/classification';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -33,6 +34,7 @@ type Artwork = {
   dimensions?: string | null;
   year?: number | null;
   is_circa?: boolean | null;
+  classification?: string | null;
   edition_number?: number | null;
   edition_total?: number | null;
   condition?: string | null;
@@ -57,10 +59,11 @@ type GalleryImage = {
 
 // Renders the artwork's structured detail fields, mirrored from Archive Atlas.
 function DetailRows({ artwork, theme }: { artwork: Artwork; theme: ReturnType<typeof useTheme> }) {
-  const edition =
-    artwork.edition_number && artwork.edition_total
-      ? `Edition ${artwork.edition_number} of ${artwork.edition_total}`
-      : null;
+  const edition = formatEditionLabel(
+    artwork.classification,
+    artwork.edition_number ?? null,
+    artwork.edition_total ?? null,
+  );
   const yearLabel = artwork.year
     ? `${artwork.is_circa ? 'c. ' : ''}${artwork.year}`
     : null;
