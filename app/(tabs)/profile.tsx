@@ -1766,7 +1766,8 @@ const handleQrScanned = ({ data }: { data: string }) => {
         </Section>
 
         <Section title="Collector Tools">
-          <Setting icon="card-outline" text="Saved Payments" />
+          {/* Saved Payments intentionally absent until the Stripe
+              SetupIntent flow exists — an always-dead row reads as breakage. */}
           <Setting
             icon="notifications-outline"
             text="Notifications"
@@ -1786,7 +1787,11 @@ const handleQrScanned = ({ data }: { data: string }) => {
             <Switch value={theme.isDark} onValueChange={theme.toggleDarkMode} />
           </View>
 
-          <Setting icon="document-text-outline" text="Legal" />
+          <Setting
+            icon="document-text-outline"
+            text="Legal"
+            onPress={() => router.push('/legal')}
+          />
         </Section>
 
         {isSignedIn && (
