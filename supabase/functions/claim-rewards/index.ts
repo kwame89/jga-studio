@@ -14,7 +14,26 @@ const ERC20_ABI = [
     ],
     outputs: [{ name: '', type: 'bool' }],
   },
+  {
+    type: 'function',
+    name: 'balanceOf',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
 ] as const
+
+/**
+ * Collector-facing error. Keep the message vague about internals — a claimant
+ * should never learn which secret is unset or which wallet is empty — and put
+ * the actionable detail in console.error for the studio's logs.
+ */
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
 
 Deno.serve(async (req) => {
   try {
@@ -90,11 +109,51 @@ Deno.serve(async (req) => {
       })
     }
 
-    const treasuryKey = Deno.env.get('TREASURY_PRIVATE_KEY')!
-    const tokenAddress = Deno.env.get('JGA_TOKEN_ADDRESS')! as `0x${string}`
-    const rpcUrl = Deno.env.get('BASE_RPC_URL')!
+    // The signer is a dedicated hot wallet holding a working float — NOT the
+    // studio treasury, which is a passkey-controlled Base App account with no
+    // exportable key. REWARDS_SIGNER_PRIVATE_KEY is the accurate name;
+    // TREASURY_PRIVATE_KEY is the original one and stays as a fallback so
+    // deploying this does not require rotating the secret first.
+    const signerKey =
+      Deno.env.get('REWARDS_SIGNER_PRIVATE_KEY') ??
+      Deno.env.get('TREASURY_PRIVATE_KEY')
+    const tokenAddress = Deno.env.get('JGA_TOKEN_ADDRESS') as
+      | `0x${string}`
+      | undefined
+    const rpcUrl = Deno.env.get('BASE_RPC_URL')
 
-    const account = privateKeyToAccount(treasuryKey as `0x${string}`)
+    // These were non-null assertions (`!`), which type-check but are a lie at
+    // runtime: a missing secret produced an opaque crash deep inside viem
+    // rather than saying what was unconfigured. That is why this function sat
+    // broken from April to July without anyone noticing.
+    if (!signerKey) {
+      console.error('claim-rewards: no rewards signer key configured')
+      return jsonError(
+        'Reward claims are temporarily unavailable. The studio has been notified.',
+        503
+      )
+    }
+    if (!tokenAddress) {
+      console.error('claim-rewards: JGA_TOKEN_ADDRESS is not set')
+      return jsonError(
+        'Reward claims are temporarily unavailable. The studio has been notified.',
+        503
+      )
+    }
+
+    let account
+    try {
+      account = privateKeyToAccount(
+        (signerKey.startsWith('0x') ? signerKey : `0x${signerKey}`) as `0x${string}`
+      )
+    } catch {
+      // Never echo the underlying error — viem includes key material in it.
+      console.error('claim-rewards: rewards signer key is malformed')
+      return jsonError(
+        'Reward claims are temporarily unavailable. The studio has been notified.',
+        503
+      )
+    }
 
     const walletClient = createWalletClient({
       account,
@@ -108,6 +167,39 @@ Deno.serve(async (req) => {
     })
 
     const amount = parseUnits(total.toString(), 18)
+
+    // Pre-flight the signer's balances. Without this an unfunded or
+    // underfunded signer fails as an opaque revert (or, with no ETH, as a gas
+    // estimation error) after the collector has already tapped Claim.
+    const [signerJga, signerEth] = await Promise.all([
+      publicClient.readContract({
+        address: tokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [account.address],
+      }) as Promise<bigint>,
+      publicClient.getBalance({ address: account.address }),
+    ])
+
+    if (signerEth === 0n) {
+      console.error(
+        `claim-rewards: signer ${account.address} has no ETH for gas`
+      )
+      return jsonError(
+        'Reward claims are paused while the studio tops up the rewards wallet.',
+        503
+      )
+    }
+    if (signerJga < amount) {
+      console.error(
+        `claim-rewards: signer ${account.address} float too low — ` +
+          `has ${signerJga}, needs ${amount}`
+      )
+      return jsonError(
+        'Reward claims are paused while the studio tops up the rewards wallet.',
+        503
+      )
+    }
 
     const hash = await walletClient.writeContract({
       address: tokenAddress,
