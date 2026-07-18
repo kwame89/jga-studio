@@ -1101,8 +1101,9 @@ const createStyles = (
     artistImage: {
       width:
         desktopWeb || viewportWidth >= 580 ? '42%' : '100%',
-      aspectRatio:
-        desktopWeb || viewportWidth >= 580 ? 1.15 : 1.45,
+      // Matches the 4:3 crop of the studio portrait, so the frame never
+      // crops into Jay's face (high in frame) or the painting beside him.
+      aspectRatio: 1.33,
       resizeMode: 'cover',
     },
     artistCopy: {
