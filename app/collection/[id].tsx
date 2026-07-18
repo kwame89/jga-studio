@@ -11,9 +11,11 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ArtworkImage } from '../../components/ArtworkImage';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '../../themeContext';
 import { StudioLogo } from '../../components/StudioLogo';
+import { useGoBack } from '../../lib/useGoBack';
 import {
   formatArtworkPrice,
   formatCollectionYears,
@@ -23,6 +25,7 @@ import {
 
 export default function CollectionDetail() {
   const router = useRouter();
+  const goBack = useGoBack('/(tabs)/discover');
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const desktopWeb = Platform.OS === 'web' && width >= 960;
@@ -100,7 +103,7 @@ export default function CollectionDetail() {
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.iconButton}
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityLabel="Go back"
         >
           <Ionicons name="arrow-back" size={21} color="#FFFFFF" />
@@ -146,10 +149,7 @@ export default function CollectionDetail() {
             <TouchableOpacity style={styles.card} activeOpacity={0.9}>
               <View style={styles.imageFrame}>
                 {artwork.image_url ? (
-                  <Image
-                    source={{ uri: artwork.image_url }}
-                    style={styles.artworkImage}
-                  />
+                  <ArtworkImage uri={artwork.image_url} radius={6} />
                 ) : (
                   <View style={styles.artworkPlaceholder}>
                     <Ionicons
@@ -331,6 +331,7 @@ const createStyles = (
       paddingHorizontal: desktopWeb ? 36 : 18,
       flexDirection: 'row',
       flexWrap: 'wrap',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       rowGap: desktopWeb ? 38 : 24,
     },
@@ -338,23 +339,19 @@ const createStyles = (
       width: desktopWeb ? '23.5%' : '48.3%',
       minWidth: 0,
     },
+    // Height now comes from the image's own ratio (see ArtworkImage); this
+    // only anchors the sequence badge.
     imageFrame: {
       width: '100%',
-      aspectRatio: 0.78,
       position: 'relative',
-      overflow: 'hidden',
-      backgroundColor: theme.card,
-      borderRadius: 6,
-    },
-    artworkImage: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'contain',
     },
     artworkPlaceholder: {
-      flex: 1,
+      width: '100%',
+      aspectRatio: 0.78,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: theme.card,
+      borderRadius: 6,
     },
     sequenceBadge: {
       minWidth: 32,

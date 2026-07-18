@@ -11,7 +11,7 @@ import {
   Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageViewing from 'react-native-image-viewing';
@@ -20,6 +20,7 @@ import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
 import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
+import { useGoBack } from '../lib/useGoBack';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -89,7 +90,7 @@ function formatAuctionEndTime(endTime: string | null) {
 
 export default function ArtworkDetailImpl() {
   const { id } = useLocalSearchParams();
-  const router = useRouter();
+  const goBack = useGoBack('/(tabs)/discover');
   const theme = useTheme();
   const styles = createStyles(theme);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -324,7 +325,7 @@ useEffect(() => {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+          <TouchableOpacity onPress={goBack} style={styles.iconBtn}>
             <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
 

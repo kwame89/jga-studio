@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../themeContext';
+import { useGoBack } from '../lib/useGoBack';
 
 type NotificationItem = {
   id: string;
@@ -44,7 +44,7 @@ const mockNotifications: NotificationItem[] = [
 ];
 
 export default function NotificationsScreen() {
-  const router = useRouter();
+  const goBack = useGoBack('/(tabs)');
   const theme = useTheme();
   const styles = createStyles(theme);
 
@@ -67,7 +67,7 @@ export default function NotificationsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={goBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
 

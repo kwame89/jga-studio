@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
 import { BuyArtworkPanel } from './BuyArtworkPanel';
 import { AdminArtworkControls } from './AdminArtworkControls';
 import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
+import { useGoBack } from '../lib/useGoBack';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -93,7 +94,9 @@ function DetailRows({ artwork, theme }: { artwork: Artwork; theme: ReturnType<ty
 
 export default function ArtworkDetailImpl() {
   const { id } = useLocalSearchParams();
-  const router = useRouter();
+  // Falls back to Discover: an artwork page reached by a shared link has no
+  // history, and the browse grid is the natural parent.
+  const goBack = useGoBack('/(tabs)/discover');
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const desktopWeb = width >= 960;
@@ -178,7 +181,7 @@ export default function ArtworkDetailImpl() {
 
         <TouchableOpacity
           style={[styles.button, { backgroundColor: theme.accent }]}
-          onPress={() => router.back()}
+          onPress={goBack}
         >
           <Text style={styles.buttonText}>Go Back</Text>
         </TouchableOpacity>
@@ -199,7 +202,7 @@ export default function ArtworkDetailImpl() {
         <StudioLogo compact />
       </View>
 
-      <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
+      <TouchableOpacity onPress={goBack} style={styles.backRow}>
         <Text style={[styles.backText, { color: theme.accent }]}>Back</Text>
       </TouchableOpacity>
 

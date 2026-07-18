@@ -1,14 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../themeContext';
+import { useGoBack } from '../../lib/useGoBack';
 
 // Stripe cancel_url target. The order's 30-minute hold expires on its own
 // (lazily released), so nothing needs cleaning up here.
 
 export default function CheckoutCancelled() {
   const { order } = useLocalSearchParams<{ order?: string }>();
-  const router = useRouter();
+  const goBack = useGoBack('/(tabs)/discover');
   const theme = useTheme();
 
   return (
@@ -20,7 +21,7 @@ export default function CheckoutCancelled() {
       </Text>
       <TouchableOpacity
         style={[styles.button, { backgroundColor: theme.accent }]}
-        onPress={() => router.back()}
+        onPress={goBack}
       >
         <Text style={styles.buttonText}>Back to the artwork</Text>
       </TouchableOpacity>

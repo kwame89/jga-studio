@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { StudioMasthead } from '../../components/StudioMasthead';
+import { ArtworkImage } from '../../components/ArtworkImage';
 import {
   getStudioCategory,
   getStudioCategoryDefinition,
@@ -292,15 +293,11 @@ export default function Discover() {
                   </Text>
                 </View>
               ) : (
-                <View style={styles.artworkGrid}>
-                  {visibleArtworks.map((artwork) => (
-                    <ArtworkCard
-                      key={artwork.id}
-                      artwork={artwork}
-                      styles={styles}
-                    />
-                  ))}
-                </View>
+                <ArtworkMasonry
+                  artworks={visibleArtworks}
+                  columns={desktopWeb ? 4 : 2}
+                  styles={styles}
+                />
               )}
             </View>
           </>
@@ -358,6 +355,34 @@ function SectionHeading({
   );
 }
 
+// Cards no longer share a height, so a flex-wrap grid would leave a ragged
+// gap under every short card. Dealing them into fixed columns top-to-bottom
+// gives the gallery masonry look instead: each column packs independently.
+function ArtworkMasonry({
+  artworks,
+  columns,
+  styles,
+}: {
+  artworks: StudioArtwork[];
+  columns: number;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const buckets: StudioArtwork[][] = Array.from({ length: columns }, () => []);
+  artworks.forEach((artwork, i) => buckets[i % columns].push(artwork));
+
+  return (
+    <View style={styles.artworkGrid}>
+      {buckets.map((bucket, i) => (
+        <View key={i} style={styles.artworkColumn}>
+          {bucket.map((artwork) => (
+            <ArtworkCard key={artwork.id} artwork={artwork} styles={styles} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function ArtworkCard({
   artwork,
   styles,
@@ -370,17 +395,11 @@ function ArtworkCard({
   return (
     <Link href={`/artwork/${artwork.id}`} asChild>
       <TouchableOpacity style={styles.artworkCard} activeOpacity={0.9}>
-        <View style={styles.artworkImageFrame}>
-          {artwork.image_url ? (
-            <Image
-              source={{ uri: artwork.image_url }}
-              style={styles.artworkImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.imagePlaceholder} />
-          )}
-        </View>
+        {artwork.image_url ? (
+          <ArtworkImage uri={artwork.image_url} />
+        ) : (
+          <View style={styles.imagePlaceholder} />
+        )}
         <Text style={styles.artworkCategory}>{category.label}</Text>
         <Text style={styles.artworkTitle} numberOfLines={2}>
           {artwork.title}
@@ -656,24 +675,17 @@ const createStyles = (
     artworkGrid: {
       paddingHorizontal: desktopWeb ? 42 : 18,
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      columnGap: desktopWeb ? 26 : 14,
+    },
+    artworkColumn: {
+      flex: 1,
+      minWidth: 0,
       rowGap: desktopWeb ? 44 : 28,
     },
     artworkCard: {
-      width: desktopWeb ? '23.6%' : '48%',
+      width: '100%',
       minWidth: 0,
-    },
-    artworkImageFrame: {
-      width: '100%',
-      aspectRatio: 0.8,
-      overflow: 'hidden',
-      backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
-      borderRadius: 4,
-    },
-    artworkImage: {
-      width: '100%',
-      height: '100%',
     },
     artworkCategory: {
       color: theme.accent,
