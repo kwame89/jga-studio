@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Link } from 'expo-router';
 
 /**
@@ -37,15 +37,21 @@ export function StudioLogo({
     );
   }
 
+  // TouchableOpacity, not Pressable: `Link asChild` around a Pressable
+  // crashes React Native Web at startup ("Failed to set an indexed property
+  // on CSSStyleDeclaration"), because Pressable's function-style prop does
+  // not survive the clone. TouchableOpacity is the pairing already used
+  // elsewhere in this app (see the Discover grid).
   return (
     <Link href="/(tabs)" asChild>
-      <Pressable
+      <TouchableOpacity
         style={[styles.viewport, compact && styles.viewportCompact]}
         accessibilityLabel="JGA Studio — go to the home page"
         accessibilityRole="link"
+        activeOpacity={0.75}
       >
         {mark}
-      </Pressable>
+      </TouchableOpacity>
     </Link>
   );
 }
