@@ -703,7 +703,9 @@ const createStyles = (
       width: desktopWeb ? '68%' : '100%',
       aspectRatio: desktopWeb ? 1.3 : 0.94,
       position: 'relative',
-      backgroundColor: '#111013',
+      // Match the hero background so a `contain`-fitted work floats flush
+      // instead of sitting inside a visibly lighter panel.
+      backgroundColor: '#080709',
     },
     heroImage: {
       width: '100%',
@@ -1087,6 +1089,9 @@ const createStyles = (
     artistFeature: {
       minHeight: 310,
       marginTop: desktopWeb ? 72 : 42,
+      // Breathing room before the featured artwork below (the spotlight now
+      // leads the page, so it needs space on both sides, not just above).
+      marginBottom: desktopWeb ? 72 : 42,
       flexDirection:
         desktopWeb || viewportWidth >= 580 ? 'row' : 'column',
       backgroundColor: '#080709',
