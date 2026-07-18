@@ -8,9 +8,12 @@
     "icon": "./assets/icon.png",
     "scheme": "jgastudio",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/jga-studio-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#F8F5F0"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
