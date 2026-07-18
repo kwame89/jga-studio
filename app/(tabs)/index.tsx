@@ -317,7 +317,7 @@ export default function Home() {
           </Link>
         ) : (
           <View style={styles.emptyHero}>
-            <StudioLogo />
+            <StudioLogo link={false} />
             <Text style={styles.emptyHeroTitle}>The studio is being prepared.</Text>
           </View>
         )}
