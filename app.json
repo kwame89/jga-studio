@@ -31,7 +31,8 @@
       "bundleIdentifier": "com.jaygolding.jgastudio",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "JGA Studio uses the camera so collectors can upload profile photos and share artwork-related images when features requiring image capture are enabled."
+        "NSCameraUsageDescription": "JGA Studio uses the camera so collectors can upload profile photos and share artwork-related images when features requiring image capture are enabled.",
+        "NSPhotoLibraryUsageDescription": "JGA Studio needs access to your photo library so you can choose a profile picture."
       }
     },
     "android": {

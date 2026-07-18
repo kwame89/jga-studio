@@ -36,6 +36,13 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import { useRouter } from 'expo-router';
+import {
+  fetchCollectorProfile,
+  pickAvatar,
+  saveCollectorProfile,
+  MAX_DISPLAY_NAME_LENGTH,
+  type CollectorProfile,
+} from '../../lib/collectorProfile';
 import { useTheme } from '../../themeContext';
 import { supabase } from '../../supabaseClient';
 import StudioCatalogManager from '../../components/StudioCatalogManager';
@@ -338,6 +345,16 @@ export default function Profile() {
     null;
 
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Collector-set identity (display name + avatar), stored in
+  // collector_profiles and reached through the collector-profile function.
+  const [profile, setProfile] = useState<CollectorProfile | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameBusy, setNameBusy] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  // Shown immediately after picking, before the upload round-trip finishes.
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
   const isSignedIn = !!user;
   const walletAddress = wallets?.[0]?.address ?? null;
   const walletReady = !!walletAddress;
@@ -399,6 +416,97 @@ export default function Profile() {
       console.error('SUPABASE WALLET SYNC FAILED', err);
     }
   };
+
+  // --- collector profile (display name + avatar) ---------------------------
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProfile() {
+      if (!isSignedIn) {
+        setProfile(null);
+        setNameDraft('');
+        setAvatarPreview(null);
+        return;
+      }
+      try {
+        const token = await getAccessToken();
+        if (!token || cancelled) return;
+        const next = await fetchCollectorProfile(token);
+        if (cancelled) return;
+        setProfile(next);
+        setNameDraft(next?.display_name ?? '');
+      } catch (error) {
+        // A missing profile is the normal first-run state; only surface real
+        // failures to the console rather than blocking the whole screen.
+        console.warn('collector profile load failed', error);
+      }
+    }
+
+    loadProfile();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally keyed on sign-in state alone. getAccessToken comes from
+    // usePrivy and is not guaranteed to be referentially stable; including it
+    // would re-run this on every render. It is only read when the effect
+    // fires, so a stale reference cannot be observed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn]);
+
+  const trimmedNameDraft = nameDraft.trim();
+  const nameDirty = trimmedNameDraft !== (profile?.display_name ?? '');
+
+  const handleSaveName = async () => {
+    if (!nameDirty || nameBusy) return;
+    setNameBusy(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error('Sign in required');
+      const next = await saveCollectorProfile(token, {
+        displayName: trimmedNameDraft.length ? trimmedNameDraft : null,
+      });
+      setProfile(next);
+      setNameDraft(next.display_name ?? '');
+    } catch (error) {
+      Alert.alert(
+        'Could not save your name',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setNameBusy(false);
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    if (avatarBusy) return;
+    try {
+      const picked = await pickAvatar();
+      if (!picked) return; // cancelled — not an error
+
+      setAvatarPreview(picked.previewUri);
+      setAvatarBusy(true);
+
+      const token = await getAccessToken();
+      if (!token) throw new Error('Sign in required');
+      const next = await saveCollectorProfile(token, {
+        avatarBase64: picked.base64,
+        avatarMime: picked.mime,
+      });
+      setProfile(next);
+      setAvatarPreview(null);
+    } catch (error) {
+      setAvatarPreview(null);
+      Alert.alert(
+        'Could not update your photo',
+        error instanceof Error ? error.message : 'Please try again.',
+      );
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const avatarUri = avatarPreview ?? profile?.avatar_url ?? null;
 
   const fetchSavedWalletRecord = async () => {
     try {
@@ -1192,16 +1300,72 @@ const handleQrScanned = ({ data }: { data: string }) => {
         />
 
         <View style={styles.header}>
-          <View style={styles.identityMark}>
-            <Ionicons name="person-outline" size={28} color={theme.accent} />
-          </View>
+          <TouchableOpacity
+            style={styles.identityMark}
+            onPress={handlePickAvatar}
+            disabled={!isSignedIn || avatarBusy}
+            activeOpacity={0.85}
+            accessibilityLabel={
+              avatarUri ? 'Change profile photo' : 'Add a profile photo'
+            }
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.identityPhoto} />
+            ) : (
+              <Ionicons name="person-outline" size={28} color={theme.accent} />
+            )}
+
+            {isSignedIn ? (
+              <View style={styles.identityMarkBadge}>
+                {avatarBusy ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="camera" size={13} color="#FFFFFF" />
+                )}
+              </View>
+            ) : null}
+          </TouchableOpacity>
+
           <Text style={styles.name}>
-            {isSignedIn ? 'JGA Studio Collector' : 'JGA Studio Profile'}
+            {isSignedIn
+              ? profile?.display_name || 'JGA Studio Collector'
+              : 'JGA Studio Profile'}
           </Text>
 
           <Text style={styles.role}>
             {isSignedIn ? displayName : 'Collector Identity Hub'}
           </Text>
+
+          {isSignedIn ? (
+            <View style={styles.nameEditor}>
+              <TextInput
+                style={styles.nameInput}
+                value={nameDraft}
+                onChangeText={setNameDraft}
+                placeholder="Add your name"
+                placeholderTextColor={theme.isDark ? '#827D86' : '#858087'}
+                maxLength={MAX_DISPLAY_NAME_LENGTH}
+                returnKeyType="done"
+                onSubmitEditing={handleSaveName}
+                editable={!nameBusy}
+              />
+              <TouchableOpacity
+                style={[
+                  styles.nameSaveButton,
+                  (!nameDirty || nameBusy) && styles.buttonDisabled,
+                ]}
+                onPress={handleSaveName}
+                disabled={!nameDirty || nameBusy}
+                activeOpacity={0.85}
+              >
+                {nameBusy ? (
+                  <ActivityIndicator size="small" color={theme.background} />
+                ) : (
+                  <Text style={styles.nameSaveText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           <View style={styles.badgeRow}>
             <View style={styles.tierBadge}>
@@ -2187,15 +2351,74 @@ const createStyles = (theme: any, desktopWeb = false) =>
     },
 
     identityMark: {
-      width: 62,
-      height: 62,
+      width: 76,
+      height: 76,
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: 4,
+      borderRadius: 38,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 16,
       backgroundColor: theme.card,
+      // The camera badge is pinned to the rim, so it must not be clipped.
+      position: 'relative',
+    },
+
+    identityPhoto: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 38,
+    },
+
+    identityMarkBadge: {
+      position: 'absolute',
+      right: -2,
+      bottom: -2,
+      width: 26,
+      height: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 13,
+      backgroundColor: theme.accent,
+      borderWidth: 2,
+      borderColor: theme.background,
+    },
+
+    nameEditor: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      alignSelf: 'stretch',
+      maxWidth: 420,
+      marginTop: 4,
+      marginBottom: 14,
+    },
+
+    nameInput: {
+      flex: 1,
+      minWidth: 0,
+      minHeight: 44,
+      paddingHorizontal: 13,
+      color: theme.text,
+      fontSize: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 6,
+    },
+
+    nameSaveButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      paddingHorizontal: 18,
+      backgroundColor: theme.text,
+      borderRadius: 6,
+    },
+
+    nameSaveText: {
+      color: theme.background,
+      fontSize: 13,
+      fontWeight: '800',
     },
 
     name: {
