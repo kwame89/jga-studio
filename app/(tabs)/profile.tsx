@@ -35,6 +35,7 @@ import {
   parseUnits,
 } from 'viem';
 import { base } from 'viem/chains';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../themeContext';
 import { supabase } from '../../supabaseClient';
 import StudioCatalogManager from '../../components/StudioCatalogManager';
@@ -281,6 +282,7 @@ function transferSortValue(item: TransferItem) {
 }
 
 export default function Profile() {
+  const router = useRouter();
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const desktopWeb = Platform.OS === 'web' && width >= 960;
@@ -1765,8 +1767,16 @@ const handleQrScanned = ({ data }: { data: string }) => {
 
         <Section title="Collector Tools">
           <Setting icon="card-outline" text="Saved Payments" />
-          <Setting icon="notifications-outline" text="Notifications" />
-          <Setting icon="hammer-outline" text="My Bids & Auctions" />
+          <Setting
+            icon="notifications-outline"
+            text="Notifications"
+            onPress={() => router.push('/notifications')}
+          />
+          <Setting
+            icon="hammer-outline"
+            text="My Bids & Auctions"
+            onPress={() => router.push('/auctions')}
+          />
         </Section>
 
         <Section title="Settings">
@@ -2081,17 +2091,36 @@ function Section({ title, children }: any) {
   );
 }
 
-function Setting({ icon, text }: any) {
+function Setting({
+  icon,
+  text,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  text: string;
+  /** Omit only for rows with nowhere to go yet — they stay explicitly inert. */
+  onPress?: () => void;
+}) {
   const theme = useTheme();
   const styles = createStyles(theme);
 
   return (
     <TouchableOpacity
       style={styles.settingRow}
-      onPress={() => Alert.alert(text, 'Coming soon')}
+      onPress={onPress ?? (() => Alert.alert(text, 'Coming soon'))}
+      activeOpacity={0.85}
     >
-      <Ionicons name={icon as any} size={22} color={theme.text} />
+      <Ionicons name={icon} size={22} color={theme.text} />
       <Text style={styles.settingText}>{text}</Text>
+      {/* Only rows that actually navigate get the affordance. */}
+      {onPress ? (
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={theme.text}
+          style={styles.settingChevron}
+        />
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -3026,6 +3055,10 @@ const createStyles = (theme: any, desktopWeb = false) =>
       marginBottom: 10,
       borderWidth: 1,
       borderColor: theme.border,
+    },
+
+    settingChevron: {
+      opacity: 0.35,
     },
 
     settingText: {

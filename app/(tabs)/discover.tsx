@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { StudioMasthead } from '../../components/StudioMasthead';
+import { ArtworkCaption } from '../../components/ArtworkCaption';
 import { ArtworkImage } from '../../components/ArtworkImage';
 import {
   getStudioCategory,
@@ -336,6 +337,7 @@ export default function Discover() {
                   artworks={visibleArtworks}
                   columns={desktopWeb ? 4 : 2}
                   styles={styles}
+                  desktop={desktopWeb}
                 />
               )}
             </View>
@@ -401,10 +403,12 @@ function ArtworkMasonry({
   artworks,
   columns,
   styles,
+  desktop,
 }: {
   artworks: StudioArtwork[];
   columns: number;
   styles: ReturnType<typeof createStyles>;
+  desktop: boolean;
 }) {
   const buckets: StudioArtwork[][] = Array.from({ length: columns }, () => []);
   artworks.forEach((artwork, i) => buckets[i % columns].push(artwork));
@@ -414,7 +418,12 @@ function ArtworkMasonry({
       {buckets.map((bucket, i) => (
         <View key={i} style={styles.artworkColumn}>
           {bucket.map((artwork) => (
-            <ArtworkCard key={artwork.id} artwork={artwork} styles={styles} />
+            <ArtworkCard
+              key={artwork.id}
+              artwork={artwork}
+              styles={styles}
+              desktop={desktop}
+            />
           ))}
         </View>
       ))}
@@ -425,9 +434,11 @@ function ArtworkMasonry({
 function ArtworkCard({
   artwork,
   styles,
+  desktop,
 }: {
   artwork: StudioArtwork;
   styles: ReturnType<typeof createStyles>;
+  desktop: boolean;
 }) {
   const category = getStudioCategoryDefinition(getStudioCategory(artwork));
 
@@ -439,17 +450,16 @@ function ArtworkCard({
         ) : (
           <View style={styles.imagePlaceholder} />
         )}
-        <Text style={styles.artworkCategory}>{category.label}</Text>
-        <Text style={styles.artworkTitle} numberOfLines={2}>
-          {artwork.title}
-        </Text>
-        <Text style={styles.artworkMeta} numberOfLines={2}>
-          {[artwork.year, artwork.medium].filter(Boolean).join(' · ') ||
-            category.shortDescription}
-        </Text>
-        <Text style={styles.artworkPrice}>
-          {formatArtworkPrice(artwork.price_usd)}
-        </Text>
+        <ArtworkCaption
+          category={category.label}
+          title={artwork.title}
+          meta={
+            [artwork.year, artwork.medium].filter(Boolean).join(' · ') ||
+            category.shortDescription
+          }
+          price={formatArtworkPrice(artwork.price_usd)}
+          desktop={desktop}
+        />
       </TouchableOpacity>
     </Link>
   );
@@ -737,38 +747,6 @@ const createStyles = (
     artworkCard: {
       width: '100%',
       minWidth: 0,
-    },
-    // Caption block: the label/title/medium/price sit as one tight stack
-    // directly under the work. The title and meta lines previously carried
-    // minHeights so every card matched height, but in a masonry grid that
-    // only stranded whitespace under short titles.
-    artworkCategory: {
-      color: theme.accent,
-      fontSize: 8,
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0,
-      marginTop: 10,
-      marginBottom: 3,
-    },
-    artworkTitle: {
-      color: theme.text,
-      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: desktopWeb ? 19 : 16,
-      lineHeight: desktopWeb ? 23 : 19,
-    },
-    artworkMeta: {
-      color: theme.text,
-      opacity: 0.5,
-      fontSize: desktopWeb ? 11 : 9,
-      lineHeight: desktopWeb ? 17 : 14,
-      marginTop: 3,
-    },
-    artworkPrice: {
-      color: theme.text,
-      fontSize: 11,
-      fontWeight: '800',
-      marginTop: 3,
     },
     emptyCatalog: {
       minHeight: 220,

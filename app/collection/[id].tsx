@@ -11,7 +11,12 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ArtworkCaption } from '../../components/ArtworkCaption';
 import { ArtworkImage } from '../../components/ArtworkImage';
+import {
+  getStudioCategory,
+  getStudioCategoryDefinition,
+} from '../../lib/artworkCategories';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '../../themeContext';
 import { StudioLogo } from '../../components/StudioLogo';
@@ -165,15 +170,17 @@ export default function CollectionDetail() {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.artworkTitle} numberOfLines={2}>
-                {artwork.title}
-              </Text>
-              <Text style={styles.artworkMeta} numberOfLines={1}>
-                {[artwork.year, artwork.medium].filter(Boolean).join(' · ')}
-              </Text>
-              <Text style={styles.price}>
-                {formatArtworkPrice(artwork.price_usd)}
-              </Text>
+              <ArtworkCaption
+                category={getStudioCategoryDefinition(
+                  getStudioCategory(artwork),
+                ).label}
+                title={artwork.title}
+                meta={[artwork.year, artwork.medium]
+                  .filter(Boolean)
+                  .join(' · ')}
+                price={formatArtworkPrice(artwork.price_usd)}
+                desktop={desktopWeb}
+              />
             </TouchableOpacity>
           </Link>
         ))}
@@ -284,12 +291,18 @@ const createStyles = (
       borderBottomWidth: 1,
       borderBottomColor: theme.border,
     },
+    // The year/"studio collection" rule sat almost flush against the
+    // collection title below it, so a 34–46px serif line read as if it were
+    // hanging off the divider. Give the title room to breathe.
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 12,
-      marginBottom: 8,
+      paddingBottom: desktopWeb ? 18 : 14,
+      marginBottom: desktopWeb ? 24 : 18,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
     },
     meta: {
       color: '#A36A2A',
@@ -369,26 +382,5 @@ const createStyles = (
       color: '#FFFFFF',
       fontSize: 10,
       fontWeight: '700',
-    },
-    artworkTitle: {
-      minHeight: 39,
-      color: theme.text,
-      fontSize: 14,
-      lineHeight: 19,
-      fontWeight: '700',
-      marginTop: 9,
-    },
-    artworkMeta: {
-      minHeight: 17,
-      color: theme.text,
-      opacity: 0.58,
-      fontSize: 11,
-      marginTop: 3,
-    },
-    price: {
-      color: theme.text,
-      fontSize: 12,
-      fontWeight: '600',
-      marginTop: 5,
     },
   });

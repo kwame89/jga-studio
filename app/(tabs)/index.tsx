@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
+import { ArtworkCaption } from '../../components/ArtworkCaption';
 import { ArtworkImage } from '../../components/ArtworkImage';
 import { StudioLogo } from '../../components/StudioLogo';
 import { StudioMasthead } from '../../components/StudioMasthead';
@@ -615,17 +616,16 @@ function ArtworkRailCard({
             </View>
           ) : null}
         </View>
-        <Text style={styles.artworkCategory}>{category?.label}</Text>
-        <Text style={styles.artworkTitle} numberOfLines={2}>
-          {artwork.title}
-        </Text>
-        <Text style={styles.artworkMeta} numberOfLines={2}>
-          {[artwork.year, artwork.medium].filter(Boolean).join(' · ') ||
-            'Studio work'}
-        </Text>
-        <Text style={styles.artworkPrice}>
-          {formatArtworkPrice(artwork.price_usd)}
-        </Text>
+        <ArtworkCaption
+          category={category?.label}
+          title={artwork.title}
+          meta={
+            [artwork.year, artwork.medium].filter(Boolean).join(' · ') ||
+            'Studio work'
+          }
+          price={formatArtworkPrice(artwork.price_usd)}
+          size="large"
+        />
       </TouchableOpacity>
     </Link>
   );
@@ -968,37 +968,6 @@ const createStyles = (
       fontWeight: '800',
       textTransform: 'uppercase',
       letterSpacing: 0,
-    },
-    // Caption block, matching Discover's cards: one tight stack under the
-    // work — purple category label, title, medium line, price. The old rule
-    // and metadata row pushed the details a full line away from the title.
-    artworkCategory: {
-      color: theme.accent,
-      fontSize: 9,
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0,
-      marginTop: 10,
-      marginBottom: 3,
-    },
-    artworkTitle: {
-      color: theme.text,
-      fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
-      fontSize: 18,
-      lineHeight: 21,
-    },
-    artworkMeta: {
-      color: theme.text,
-      opacity: 0.52,
-      fontSize: 10,
-      lineHeight: 15,
-      marginTop: 3,
-    },
-    artworkPrice: {
-      color: theme.text,
-      fontSize: 11,
-      fontWeight: '800',
-      marginTop: 3,
     },
     collectionCard: {
       width: desktopWeb ? '32.6%' : COLLECTION_CARD_WIDTH,
