@@ -30,6 +30,12 @@ import {
   type StudioArtwork,
   type StudioCollection,
 } from '../../lib/studioCollections';
+import {
+  parsePriceTier,
+  priceInTier,
+  PRICE_TIERS,
+  type PriceTierKey,
+} from '../../constants/studioContent';
 import { useTheme } from '../../themeContext';
 
 type CategoryFilter = StudioCategoryKey | 'all';
@@ -52,11 +58,17 @@ export default function Discover() {
   const { width } = useWindowDimensions();
   const desktopWeb = Platform.OS === 'web' && width >= 960;
   const styles = createStyles(theme, desktopWeb);
-  const params = useLocalSearchParams<{ category?: string | string[] }>();
+  const params = useLocalSearchParams<{
+    category?: string | string[];
+    tier?: string | string[];
+  }>();
   const [collections, setCollections] = useState<StudioCollection[]>([]);
   const [artworks, setArtworks] = useState<StudioArtwork[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(
     parseStudioCategory(params.category),
+  );
+  const [selectedTier, setSelectedTier] = useState<PriceTierKey>(
+    parsePriceTier(params.tier),
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -65,6 +77,11 @@ export default function Discover() {
   useEffect(() => {
     setSelectedCategory(parseStudioCategory(params.category));
   }, [params.category]);
+
+  // Home's price chips deep-link in here, so the tier travels as a route param.
+  useEffect(() => {
+    setSelectedTier(parsePriceTier(params.tier));
+  }, [params.tier]);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,9 +123,10 @@ export default function Discover() {
         (artwork) =>
           artworkMatchesSearch(artwork, normalizedQuery) &&
           (selectedCategory === 'all' ||
-            getStudioCategory(artwork) === selectedCategory),
+            getStudioCategory(artwork) === selectedCategory) &&
+          priceInTier(artwork.price_usd, selectedTier),
       ),
-    [artworks, normalizedQuery, selectedCategory],
+    [artworks, normalizedQuery, selectedCategory, selectedTier],
   );
 
   const activeCategory =
@@ -154,28 +172,49 @@ export default function Discover() {
             />
           </View>
 
-          <ScrollView
-            style={styles.categoryFilterScroll}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryFilters}
-          >
-            <CategoryButton
-              label="All"
-              active={selectedCategory === 'all'}
-              onPress={() => setSelectedCategory('all')}
-              styles={styles}
-            />
-            {STUDIO_CATEGORIES.map((category) => (
-              <CategoryButton
-                key={category.key}
-                label={category.label}
-                active={selectedCategory === category.key}
-                onPress={() => setSelectedCategory(category.key)}
+          <View style={styles.filterChipGroups}>
+            <ScrollView
+              style={styles.categoryFilterScroll}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryFilters}
+            >
+              <FilterChip
+                label="All"
+                active={selectedCategory === 'all'}
+                onPress={() => setSelectedCategory('all')}
                 styles={styles}
               />
-            ))}
-          </ScrollView>
+              {STUDIO_CATEGORIES.map((category) => (
+                <FilterChip
+                  key={category.key}
+                  label={category.label}
+                  active={selectedCategory === category.key}
+                  onPress={() => setSelectedCategory(category.key)}
+                  styles={styles}
+                />
+              ))}
+            </ScrollView>
+
+            <ScrollView
+              style={styles.categoryFilterScroll}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryFilters}
+            >
+              {PRICE_TIERS.map((tier) => (
+                <FilterChip
+                  key={tier.key}
+                  // Stacked under the category row, a bare "All" would read as
+                  // a second copy of that row's "All".
+                  label={tier.key === 'all' ? 'Any price' : tier.label}
+                  active={selectedTier === tier.key}
+                  onPress={() => setSelectedTier(tier.key)}
+                  styles={styles}
+                />
+              ))}
+            </ScrollView>
+          </View>
         </View>
 
         {loading ? (
@@ -289,7 +328,7 @@ export default function Discover() {
                   />
                   <Text style={styles.emptyTitle}>No matching works</Text>
                   <Text style={styles.mutedText}>
-                    Try another category or clear the search.
+                    Try another category or price range, or clear the search.
                   </Text>
                 </View>
               ) : (
@@ -307,7 +346,7 @@ export default function Discover() {
   );
 }
 
-function CategoryButton({
+function FilterChip({
   label,
   active,
   onPress,
@@ -486,6 +525,18 @@ const createStyles = (
       color: theme.text,
       fontSize: 13,
     },
+    // Two chip rows (category, then price tier) share the space beside the
+    // search field on desktop and stack under it on mobile.
+    //
+    // No `flex` on mobile: RNW compiles `flex: 0` to `flex: 0 1 0%`, i.e. a
+    // zero flex-basis that never grows, which collapses this column to height
+    // 0 and stacks both chip rows on top of each other. Auto height is what
+    // this wants.
+    filterChipGroups: {
+      minWidth: 0,
+      flex: desktopWeb ? 1 : undefined,
+      gap: desktopWeb ? 8 : 0,
+    },
     categoryFilters: {
       paddingHorizontal: desktopWeb ? 0 : 18,
       paddingTop: desktopWeb ? 0 : 10,
@@ -494,7 +545,7 @@ const createStyles = (
     },
     categoryFilterScroll: {
       minWidth: 0,
-      flex: desktopWeb ? 1 : 0,
+      flexGrow: 0,
     },
     categoryFilter: {
       minHeight: 36,
@@ -687,29 +738,31 @@ const createStyles = (
       width: '100%',
       minWidth: 0,
     },
+    // Caption block: the label/title/medium/price sit as one tight stack
+    // directly under the work. The title and meta lines previously carried
+    // minHeights so every card matched height, but in a masonry grid that
+    // only stranded whitespace under short titles.
     artworkCategory: {
       color: theme.accent,
       fontSize: 8,
       fontWeight: '800',
       textTransform: 'uppercase',
       letterSpacing: 0,
-      marginTop: 9,
-      marginBottom: 4,
+      marginTop: 10,
+      marginBottom: 3,
     },
     artworkTitle: {
-      minHeight: 40,
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
       fontSize: desktopWeb ? 19 : 16,
       lineHeight: desktopWeb ? 23 : 19,
     },
     artworkMeta: {
-      minHeight: 30,
       color: theme.text,
       opacity: 0.5,
       fontSize: desktopWeb ? 11 : 9,
       lineHeight: desktopWeb ? 17 : 14,
-      marginTop: 5,
+      marginTop: 3,
     },
     artworkPrice: {
       color: theme.text,

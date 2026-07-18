@@ -11,17 +11,15 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
+import { ArtworkImage } from '../../components/ArtworkImage';
 import { StudioLogo } from '../../components/StudioLogo';
 import { StudioMasthead } from '../../components/StudioMasthead';
-import {
-  STUDIO,
-  PRICE_TIERS,
-  priceInTier,
-  type PriceTierKey,
-} from '../../constants/studioContent';
+import { STUDIO, PRICE_TIERS } from '../../constants/studioContent';
 import {
   getStudioCategory,
   STUDIO_CATEGORIES,
@@ -110,7 +108,6 @@ export default function Home() {
   const [collections, setCollections] = useState<StudioCollection[]>([]);
   const [auctionLots, setAuctionLots] = useState<AuctionLotRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTier, setSelectedTier] = useState<PriceTierKey>('all');
   const [heroIndex, setHeroIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -171,13 +168,8 @@ export default function Home() {
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredArtworks = useMemo(
-    () =>
-      artworks.filter(
-        (artwork) =>
-          artworkMatchesSearch(artwork, normalizedSearch) &&
-          priceInTier(artwork.price_usd, selectedTier),
-      ),
-    [artworks, normalizedSearch, selectedTier],
+    () => artworks.filter((artwork) => artworkMatchesSearch(artwork, normalizedSearch)),
+    [artworks, normalizedSearch],
   );
 
   const heroCandidates = useMemo(
@@ -344,26 +336,24 @@ export default function Home() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.priceFilters}
           >
-            {PRICE_TIERS.map((tier) => {
-              const active = selectedTier === tier.key;
-              return (
-                <TouchableOpacity
-                  key={tier.key}
-                  style={[styles.priceFilter, active && styles.priceFilterActive]}
-                  onPress={() => setSelectedTier(tier.key)}
-                  activeOpacity={0.82}
-                >
-                  <Text
-                    style={[
-                      styles.priceFilterText,
-                      active && styles.priceFilterTextActive,
-                    ]}
-                  >
-                    {tier.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            {/* Price tiers open the full catalog rather than filtering a
+                single rail further down Home, where the effect was invisible. */}
+            {PRICE_TIERS.map((tier) => (
+              <TouchableOpacity
+                key={tier.key}
+                style={styles.priceFilter}
+                onPress={() =>
+                  router.push(
+                    tier.key === 'all'
+                      ? '/discover'
+                      : { pathname: '/discover', params: { tier: tier.key } },
+                  )
+                }
+                activeOpacity={0.82}
+              >
+                <Text style={styles.priceFilterText}>{tier.label}</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         </View>
 
@@ -391,6 +381,7 @@ export default function Home() {
               desktop={desktopWeb}
               styles={styles}
               snapToInterval={CATEGORY_CARD_WIDTH + 12}
+              desktopStyle={styles.desktopEvenRail}
             >
               {categorySummaries.map((category) => (
                 <TouchableOpacity
@@ -567,14 +558,20 @@ function ResponsiveRail({
   desktop,
   snapToInterval,
   styles,
+  desktopStyle,
 }: {
   children: React.ReactNode;
   desktop: boolean;
   snapToInterval: number;
   styles: ReturnType<typeof createStyles>;
+  desktopStyle?: StyleProp<ViewStyle>;
 }) {
   if (desktop) {
-    return <View style={[styles.rail, styles.desktopRail]}>{children}</View>;
+    return (
+      <View style={[styles.rail, styles.desktopRail, desktopStyle]}>
+        {children}
+      </View>
+    );
   }
 
   return (
@@ -604,15 +601,13 @@ function ArtworkRailCard({
   return (
     <Link href={`/artwork/${artwork.id}`} asChild>
       <TouchableOpacity style={styles.artworkCard} activeOpacity={0.9}>
-        <View style={styles.artworkImageFrame}>
+        {/* ArtworkImage sizes the frame to the file's own ratio, so a work no
+            longer sits letterboxed inside a fixed 0.86 box. */}
+        <View style={styles.artworkImageWrap}>
           {artwork.image_url ? (
-            <Image
-              source={{ uri: artwork.image_url }}
-              style={styles.artworkImage}
-              resizeMode="contain"
-            />
+            <ArtworkImage uri={artwork.image_url} radius={5} />
           ) : (
-            <View style={styles.categoryPlaceholder} />
+            <View style={styles.artworkPlaceholder} />
           )}
           {isJustAdded(artwork.created_at) ? (
             <View style={styles.newBadge}>
@@ -624,15 +619,13 @@ function ArtworkRailCard({
         <Text style={styles.artworkTitle} numberOfLines={2}>
           {artwork.title}
         </Text>
-        <View style={styles.artworkMetaRow}>
-          <Text style={styles.artworkMeta} numberOfLines={1}>
-            {[artwork.year, artwork.medium].filter(Boolean).join(' · ') ||
-              'Studio work'}
-          </Text>
-          <Text style={styles.artworkPrice}>
-            {formatArtworkPrice(artwork.price_usd)}
-          </Text>
-        </View>
+        <Text style={styles.artworkMeta} numberOfLines={2}>
+          {[artwork.year, artwork.medium].filter(Boolean).join(' · ') ||
+            'Studio work'}
+        </Text>
+        <Text style={styles.artworkPrice}>
+          {formatArtworkPrice(artwork.price_usd)}
+        </Text>
       </TouchableOpacity>
     </Link>
   );
@@ -819,19 +812,11 @@ const createStyles = (
       borderColor: theme.border,
       borderRadius: 4,
     },
-    priceFilterActive: {
-      backgroundColor: theme.text,
-      borderColor: theme.text,
-    },
     priceFilterText: {
       color: theme.text,
       opacity: 0.68,
       fontSize: 11,
       fontWeight: '700',
-    },
-    priceFilterTextActive: {
-      color: theme.background,
-      opacity: 1,
     },
     loadingState: {
       minHeight: 260,
@@ -901,8 +886,17 @@ const createStyles = (
       alignItems: 'flex-start',
       rowGap: 34,
     },
+    // Percentage widths plus a fixed 12px gap overflowed the row on narrower
+    // desktop windows, wrapping the third category card onto its own line.
+    // Flexing the children divides whatever is left after the gaps instead.
+    desktopEvenRail: {
+      flexWrap: 'nowrap',
+      alignItems: 'stretch',
+    },
     categoryCard: {
-      width: desktopWeb ? '32.6%' : CATEGORY_CARD_WIDTH,
+      width: desktopWeb ? undefined : CATEGORY_CARD_WIDTH,
+      flex: desktopWeb ? 1 : undefined,
+      minWidth: 0,
       backgroundColor: theme.card,
       borderWidth: 1,
       borderColor: theme.border,
@@ -949,17 +943,15 @@ const createStyles = (
     artworkCard: {
       width: desktopWeb ? '24%' : ARTWORK_CARD_WIDTH,
     },
-    artworkImageFrame: {
+    artworkImageWrap: {
+      width: '100%',
+      position: 'relative',
+    },
+    artworkPlaceholder: {
       width: '100%',
       aspectRatio: 0.86,
-      position: 'relative',
       backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
       borderRadius: 5,
-      overflow: 'hidden',
-    },
-    artworkImage: {
-      width: '100%',
-      height: '100%',
     },
     newBadge: {
       position: 'absolute',
@@ -977,43 +969,36 @@ const createStyles = (
       textTransform: 'uppercase',
       letterSpacing: 0,
     },
+    // Caption block, matching Discover's cards: one tight stack under the
+    // work — purple category label, title, medium line, price. The old rule
+    // and metadata row pushed the details a full line away from the title.
     artworkCategory: {
       color: theme.accent,
       fontSize: 9,
       fontWeight: '800',
       textTransform: 'uppercase',
       letterSpacing: 0,
-      marginTop: 11,
-      marginBottom: 5,
+      marginTop: 10,
+      marginBottom: 3,
     },
     artworkTitle: {
-      minHeight: 42,
       color: theme.text,
       fontFamily: Platform.select({ ios: 'Georgia', default: 'serif' }),
       fontSize: 18,
       lineHeight: 21,
     },
-    artworkMetaRow: {
-      minHeight: 36,
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 10,
-      paddingTop: 7,
-      borderTopWidth: 1,
-      borderTopColor: theme.border,
-    },
     artworkMeta: {
-      minWidth: 0,
-      flex: 1,
       color: theme.text,
       opacity: 0.52,
       fontSize: 10,
+      lineHeight: 15,
+      marginTop: 3,
     },
     artworkPrice: {
       color: theme.text,
       fontSize: 11,
       fontWeight: '800',
+      marginTop: 3,
     },
     collectionCard: {
       width: desktopWeb ? '32.6%' : COLLECTION_CARD_WIDTH,

@@ -107,6 +107,18 @@ export function priceInTier(priceUsd: number | null | undefined, key: PriceTierK
   if (key === 'all') return true;
   const tier = PRICE_TIERS.find((t) => t.key === key);
   if (!tier) return true;
-  const price = Number(priceUsd || 0);
+  // An unpriced work ("Price on request") belongs to no band. Coercing null to
+  // 0 filed every one of them under Affordable, which is both wrong and the
+  // opposite of the intent — those are the works with no public price at all.
+  if (priceUsd === null || priceUsd === undefined) return false;
+  const price = Number(priceUsd);
+  if (!Number.isFinite(price)) return false;
   return price >= tier.min && (tier.max === null || price < tier.max);
+}
+
+/** Reads a `?tier=` route param, falling back to 'all' for anything unknown. */
+export function parsePriceTier(value: string | string[] | undefined): PriceTierKey {
+  const candidate = (Array.isArray(value) ? value[0] : value)?.trim().toLowerCase();
+  if (!candidate) return 'all';
+  return PRICE_TIERS.find((tier) => tier.key === candidate)?.key ?? 'all';
 }
