@@ -1,58 +1,38 @@
 import React from 'react';
-import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Image, StyleSheet, View } from 'react-native';
 
 /**
- * The studio wordmark. It links Home by default — a masthead logo is the
- * one navigation control web visitors expect to always work, and it appears
- * in the header of every screen.
+ * The studio wordmark.
  *
- * Pass `link={false}` where the logo is decorative (e.g. on Home itself, or
- * anywhere it already sits inside a Link).
+ * NOTE: this deliberately does NOT link Home right now. Wrapping it in an
+ * expo-router `Link` (tried with both Pressable and TouchableOpacity)
+ * crashes React Native Web during render with "Failed to set an indexed
+ * property [0] on CSSStyleDeclaration", which takes down the entire app at
+ * startup rather than degrading the header. Linking the logo needs to be
+ * reintroduced against a local repro, not straight to production.
+ *
+ * The `link` prop is accepted and ignored so call sites do not have to
+ * change when it comes back.
  */
 export function StudioLogo({
   compact = false,
-  link = true,
+  link: _link = true,
 }: {
   compact?: boolean;
   link?: boolean;
 }) {
-  const mark = (
-    <Image
-      source={require('../assets/jga-studio-logo.png')}
-      style={styles.image}
-      resizeMode="cover"
-    />
-  );
-
-  if (!link) {
-    return (
-      <View
-        style={[styles.viewport, compact && styles.viewportCompact]}
-        accessibilityLabel="JGA Studio"
-        accessibilityRole="image"
-      >
-        {mark}
-      </View>
-    );
-  }
-
-  // TouchableOpacity, not Pressable: `Link asChild` around a Pressable
-  // crashes React Native Web at startup ("Failed to set an indexed property
-  // on CSSStyleDeclaration"), because Pressable's function-style prop does
-  // not survive the clone. TouchableOpacity is the pairing already used
-  // elsewhere in this app (see the Discover grid).
   return (
-    <Link href="/(tabs)" asChild>
-      <TouchableOpacity
-        style={[styles.viewport, compact && styles.viewportCompact]}
-        accessibilityLabel="JGA Studio — go to the home page"
-        accessibilityRole="link"
-        activeOpacity={0.75}
-      >
-        {mark}
-      </TouchableOpacity>
-    </Link>
+    <View
+      style={[styles.viewport, compact && styles.viewportCompact]}
+      accessibilityLabel="JGA Studio"
+      accessibilityRole="image"
+    >
+      <Image
+        source={require('../assets/jga-studio-logo.png')}
+        style={styles.image}
+        resizeMode="cover"
+      />
+    </View>
   );
 }
 
