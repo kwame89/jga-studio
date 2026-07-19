@@ -37,6 +37,7 @@ import {
 import { base } from 'viem/chains';
 import { useRouter } from 'expo-router';
 import { callCommerceFunction } from '../../lib/commerceApi';
+import { useStudioAdmin } from '../../lib/useStudioAdmin';
 import {
   fetchCollectorProfile,
   pickAvatar,
@@ -46,7 +47,6 @@ import {
 } from '../../lib/collectorProfile';
 import { useTheme } from '../../themeContext';
 import { supabase } from '../../supabaseClient';
-import StudioCatalogManager from '../../components/StudioCatalogManager';
 import { StudioMasthead } from '../../components/StudioMasthead';
 
 type WishlistItem = {
@@ -345,7 +345,6 @@ export default function Profile() {
     user?.linked_accounts?.find((acc: any) => acc.type === 'email')?.address ??
     null;
 
-  const [isAdmin, setIsAdmin] = useState(false);
 
   // Collector-set identity (display name + avatar), stored in
   // collector_profiles and reached through the collector-profile function.
@@ -357,6 +356,11 @@ export default function Profile() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const isSignedIn = !!user;
+
+  // Decides only whether to advertise the Studio row and the Admin badge. The
+  // /studio route guards itself, and admin-catalog enforces server-side, so
+  // this is presentation — not a security boundary.
+  const { isAdmin } = useStudioAdmin(getAccessToken, isSignedIn);
   const walletAddress = wallets?.[0]?.address ?? null;
   const walletReady = !!walletAddress;
   const isLoadingPrivy = !isReady;
@@ -1901,13 +1905,6 @@ const handleQrScanned = ({ data }: { data: string }) => {
           </View>
         </Section>
 
-        {isSignedIn && (
-          <StudioCatalogManager
-            getAccessToken={getAccessToken}
-            onAuthorizationChange={setIsAdmin}
-          />
-        )}
-
         <Section title="My Collection">
           {wishlist.length === 0 ? (
             <Empty text="No collected works yet" />
@@ -1970,6 +1967,16 @@ const handleQrScanned = ({ data }: { data: string }) => {
             text="Legal"
             onPress={() => router.push('/legal')}
           />
+
+          {/* Only shown to studio admins. Collectors never see it, and the
+              route rejects them anyway if they navigate there directly. */}
+          {isAdmin ? (
+            <Setting
+              icon="albums-outline"
+              text="Studio catalog"
+              onPress={() => router.push('/studio')}
+            />
+          ) : null}
         </Section>
 
         {isSignedIn && (
