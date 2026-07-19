@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { verifyPrivyUser } from '../_shared/privyAuth.ts'
 import { createWalletClient, createPublicClient, http, parseUnits } from 'npm:viem'
 import { privateKeyToAccount } from 'npm:viem/accounts'
 import { base } from 'npm:viem/chains'
@@ -42,36 +43,28 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing auth header' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    // Collectors authenticate with PRIVY, not Supabase Auth. This function
+    // predates that realignment and still called supabase.auth.getUser() on
+    // whatever token arrived — which, with no Supabase session in the app, was
+    // the anon key. That always failed, so every claim 401'd before it ever
+    // looked at a reward. create-order, get-order and the crypto-payment
+    // functions were migrated to _shared/privyAuth; this one was missed.
+    const privyUserId = await verifyPrivyUser(req)
+    if (!privyUserId) {
+      return jsonError('Sign in required', 401)
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(token)
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    const email =
-      user.email ||
-      user.identities?.find((i: any) => i.identity_data?.email)?.identity_data?.email
-
+    // privy_user_id stores the DID (did:privy:...), which is exactly the JWT
+    // `sub` verifyPrivyUser returns. The old code compared it against a
+    // Supabase user UUID, which could never have matched even if auth had
+    // worked.
     const { data: collectorWallet } = await supabase
       .from('collector_wallets')
-      .select('wallet_address')
-      .eq('privy_user_id', user.id)
+      .select('wallet_address, email')
+      .eq('privy_user_id', privyUserId)
       .maybeSingle()
+
+    const email = collectorWallet?.email ?? null
 
     if (!collectorWallet?.wallet_address) {
       return new Response(JSON.stringify({ error: 'No collector wallet found' }), {

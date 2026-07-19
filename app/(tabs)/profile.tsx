@@ -36,6 +36,7 @@ import {
 } from 'viem';
 import { base } from 'viem/chains';
 import { useRouter } from 'expo-router';
+import { callCommerceFunction } from '../../lib/commerceApi';
 import {
   fetchCollectorProfile,
   pickAvatar,
@@ -1131,11 +1132,19 @@ const handleQrScanned = ({ data }: { data: string }) => {
         `Claiming ${claimableRewardTotal.toFixed(2)} JGA_STUDIO...`
       );
 
-      const { data, error } = await supabase.functions.invoke('claim-rewards');
-
-      if (error) {
-        throw error;
+      // supabase.functions.invoke() sends the Supabase session token — and
+      // this app has no Supabase session, so it was sending the anon key.
+      // claim-rewards authenticates with Privy, same as create-order and
+      // get-order, so it needs the Privy access token via the house helper.
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error('Sign in required');
       }
+
+      const data = await callCommerceFunction<{
+        hash?: string;
+        claimed?: number;
+      }>('claim-rewards', accessToken);
 
       if (data?.hash) {
         setLastTxHash(data.hash);
