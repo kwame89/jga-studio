@@ -762,9 +762,14 @@ export default function Profile() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      getWishlist().then((saved) => {
-        if (!cancelled) setWishlist(saved);
-      });
+      // Signed in, this reconciles with collector_profiles; signed out it
+      // reads the on-device copy.
+      getAccessToken()
+        .catch(() => null)
+        .then((token: string | null) => getWishlist(token))
+        .then((saved: WishlistItem[]) => {
+          if (!cancelled) setWishlist(saved);
+        });
       return () => {
         cancelled = true;
       };
@@ -824,7 +829,8 @@ export default function Profile() {
     // while this screen was in the background.
     setWishlist((current) => current.filter((item) => item.id !== id));
     try {
-      const next = await removeFromWishlist(id);
+      const token = await getAccessToken().catch(() => null);
+      const next = await removeFromWishlist(id, token);
       setWishlist(next);
     } catch (e) {
       console.error('Error saving wishlist:', e);

@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '../supabaseClient';
+import { usePrivy } from '../lib/privy';
 import { shareArtwork } from '../lib/shareArtwork';
 import { isSaved as isArtworkSaved, toggleWishlist } from '../lib/wishlist';
 import { useTheme } from '../themeContext';
@@ -110,6 +111,7 @@ export default function ArtworkDetailImpl() {
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
+  const { getAccessToken } = usePrivy();
   const [saved, setSaved] = useState(false);
   /** Transient confirmation after a share falls back to copying the link. */
   const [shareNotice, setShareNotice] = useState('');
@@ -173,12 +175,18 @@ export default function ArtworkDetailImpl() {
 
   const handleToggleSave = async () => {
     if (!artwork) return;
-    const next = await toggleWishlist({
-      id: Number(artwork.id),
-      title: artwork.title,
-      image_url: activeImageUrl ?? artwork.image_url,
-      price_usd: Number(displayPrice ?? 0),
-    });
+    // Optimistic: the local write inside toggleWishlist is synchronous from
+    // the collector's point of view, and the server push is best-effort.
+    const token = await getAccessToken().catch(() => null);
+    const next = await toggleWishlist(
+      {
+        id: Number(artwork.id),
+        title: artwork.title,
+        image_url: activeImageUrl ?? artwork.image_url,
+        price_usd: Number(displayPrice ?? 0),
+      },
+      token,
+    );
     setSaved(next);
   };
 

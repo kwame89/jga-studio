@@ -5,9 +5,9 @@
 // read/write path, same arrangement as get-order.
 //
 // POST { action: "get" }
-//   -> { profile: { display_name, avatar_url } | null }
-// POST { action: "save", displayName?, avatarBase64?, avatarMime? }
-//   -> { profile: { display_name, avatar_url } }
+//   -> { profile: { display_name, avatar_url, wishlist } | null }
+// POST { action: "save", displayName?, avatarBase64?, avatarMime?, wishlist? }
+//   -> { profile: { display_name, avatar_url, wishlist } }
 //
 // The avatar arrives base64-encoded rather than via a signed upload URL: the
 // client already downscales to 512px, so payloads are ~100-200KB, and one
@@ -27,6 +27,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const AVATAR_BUCKET = "avatars";
 const MAX_AVATAR_BYTES = 3 * 1024 * 1024;
 const MAX_NAME_LENGTH = 60;
+// A saved-works list is a browsing aid, not a catalogue. The bound exists so a
+// malformed or malicious client cannot push an unbounded blob into the row.
+const MAX_WISHLIST_ITEMS = 500;
 const ALLOWED_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -83,7 +86,7 @@ Deno.serve(async (req) => {
     if (action === "get") {
       const { data, error } = await supabase
         .from("collector_profiles")
-        .select("display_name, avatar_url")
+        .select("display_name, avatar_url, wishlist")
         .eq("privy_did", privyUserId)
         .maybeSingle();
       if (error) throw error;
@@ -155,6 +158,41 @@ Deno.serve(async (req) => {
       updates.avatar_url = publicUrl.publicUrl;
     }
 
+    // --- wishlist ---
+    // Written whole rather than diffed: it is a small set, the client always
+    // holds the full list, and last-write-wins is the right semantic for a
+    // collector editing their own saves on one device at a time.
+    if (body?.wishlist !== undefined) {
+      const raw = body.wishlist;
+      if (!Array.isArray(raw)) {
+        return jsonResponse({ error: "wishlist must be an array" }, 400);
+      }
+      if (raw.length > MAX_WISHLIST_ITEMS) {
+        return jsonResponse(
+          { error: `A wishlist is limited to ${MAX_WISHLIST_ITEMS} works` },
+          413,
+        );
+      }
+
+      // Normalise rather than trusting the client's shape — Profile iterates
+      // these fields directly and a missing id would break rendering.
+      const cleaned = [];
+      const seen = new Set<number>();
+      for (const entry of raw) {
+        const id = Number((entry as Record<string, unknown>)?.id);
+        if (!Number.isFinite(id) || seen.has(id)) continue;
+        seen.add(id);
+        const item = entry as Record<string, unknown>;
+        cleaned.push({
+          id,
+          title: String(item.title ?? "Untitled").slice(0, 300),
+          image_url: String(item.image_url ?? "").slice(0, 2000),
+          price_usd: Number(item.price_usd ?? 0) || 0,
+        });
+      }
+      updates.wishlist = cleaned;
+    }
+
     if (Object.keys(updates).length === 1) {
       return jsonResponse({ error: "Nothing to update" }, 400);
     }
@@ -162,7 +200,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from("collector_profiles")
       .upsert(updates, { onConflict: "privy_did" })
-      .select("display_name, avatar_url")
+      .select("display_name, avatar_url, wishlist")
       .single();
     if (error) throw error;
 
