@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -35,9 +35,14 @@ import {
   parseUnits,
 } from 'viem';
 import { base } from 'viem/chains';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { callCommerceFunction } from '../../lib/commerceApi';
 import { useStudioAdmin } from '../../lib/useStudioAdmin';
+import {
+  getWishlist,
+  removeFromWishlist,
+  type WishlistItem,
+} from '../../lib/wishlist';
 import {
   fetchCollectorProfile,
   pickAvatar,
@@ -48,13 +53,6 @@ import {
 import { useTheme } from '../../themeContext';
 import { supabase } from '../../supabaseClient';
 import { StudioMasthead } from '../../components/StudioMasthead';
-
-type WishlistItem = {
-  id: number;
-  title: string;
-  image_url: string;
-  price_usd: number;
-};
 
 type SavedWalletRecord = {
   id: number;
@@ -757,18 +755,21 @@ export default function Profile() {
     }
   };
 
-  useEffect(() => {
-    const loadWishlist = async () => {
-      try {
-        const saved = await AsyncStorage.getItem('wishlist');
-        if (saved) setWishlist(JSON.parse(saved));
-      } catch (e) {
-        console.error('Error loading wishlist:', e);
-      }
-    };
-
-    loadWishlist();
-  }, []);
+  // Reloads every time Profile regains focus, not just on mount. Saving happens
+  // on the artwork detail screen, and the tab stays mounted underneath it — a
+  // mount-only load meant a work saved seconds earlier was missing from the
+  // Wishlist until the app restarted.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      getWishlist().then((saved) => {
+        if (!cancelled) setWishlist(saved);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   useEffect(() => {
     if (walletAddress) {
@@ -817,11 +818,14 @@ export default function Profile() {
     return 'No Wallet Yet';
   }, [isSignedIn, walletReady]);
 
-  const removeFromWishlist = async (id: number) => {
-    const updated = wishlist.filter((item) => item.id !== id);
-    setWishlist(updated);
+  const handleRemoveFromWishlist = async (id: number) => {
+    // Optimistic, then trust the store's result — the artwork detail screen
+    // writes to the same key, so re-reading avoids clobbering a save made
+    // while this screen was in the background.
+    setWishlist((current) => current.filter((item) => item.id !== id));
     try {
-      await AsyncStorage.setItem('wishlist', JSON.stringify(updated));
+      const next = await removeFromWishlist(id);
+      setWishlist(next);
     } catch (e) {
       console.error('Error saving wishlist:', e);
     }
@@ -1932,7 +1936,7 @@ const handleQrScanned = ({ data }: { data: string }) => {
                   <Text style={styles.wishlistTitle}>{item.title}</Text>
                   <Text style={styles.wishlistPrice}>${item.price_usd}</Text>
                 </View>
-                <TouchableOpacity onPress={() => removeFromWishlist(item.id)}>
+                <TouchableOpacity onPress={() => handleRemoveFromWishlist(item.id)}>
                   <Ionicons name="trash-outline" size={22} color="#ff4444" />
                 </TouchableOpacity>
               </View>

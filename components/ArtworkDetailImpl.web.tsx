@@ -9,8 +9,11 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '../supabaseClient';
+import { shareArtwork } from '../lib/shareArtwork';
+import { isSaved as isArtworkSaved, toggleWishlist } from '../lib/wishlist';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
 import { BuyArtworkPanel } from './BuyArtworkPanel';
@@ -107,6 +110,9 @@ export default function ArtworkDetailImpl() {
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  /** Transient confirmation after a share falls back to copying the link. */
+  const [shareNotice, setShareNotice] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -152,6 +158,45 @@ export default function ArtworkDetailImpl() {
     artwork?.image_url;
 
   const displayPrice = artwork?.price_usd ?? artwork?.price ?? null;
+
+  // Reflect whether this work is already saved whenever the artwork resolves.
+  useEffect(() => {
+    let cancelled = false;
+    if (!artwork?.id) return;
+    isArtworkSaved(Number(artwork.id)).then((result) => {
+      if (!cancelled) setSaved(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [artwork?.id]);
+
+  const handleToggleSave = async () => {
+    if (!artwork) return;
+    const next = await toggleWishlist({
+      id: Number(artwork.id),
+      title: artwork.title,
+      image_url: activeImageUrl ?? artwork.image_url,
+      price_usd: Number(displayPrice ?? 0),
+    });
+    setSaved(next);
+  };
+
+  const handleShare = async () => {
+    if (!artwork) return;
+    const outcome = await shareArtwork({
+      id: artwork.id,
+      title: artwork.title,
+      year: artwork.year,
+      medium: artwork.medium,
+    });
+    // Only the clipboard fallback needs confirming — the share sheet is its
+    // own feedback, and a dismissal should say nothing at all.
+    if (outcome === 'copied') {
+      setShareNotice('Link copied');
+      setTimeout(() => setShareNotice(''), 2400);
+    }
+  };
   const studioCategory = artwork
     ? getStudioCategoryDefinition(getStudioCategory(artwork))
     : null;
@@ -265,6 +310,47 @@ export default function ArtworkDetailImpl() {
             </Text>
           )}
 
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                {
+                  borderColor: saved ? theme.accent : theme.border,
+                  backgroundColor: saved ? theme.accent : 'transparent',
+                },
+              ]}
+              onPress={handleToggleSave}
+              activeOpacity={0.85}
+              accessibilityLabel={saved ? 'Remove from saved works' : 'Save this work'}
+            >
+              <Ionicons
+                name={saved ? 'heart' : 'heart-outline'}
+                size={17}
+                color={saved ? '#FFFFFF' : theme.text}
+              />
+              <Text
+                style={[
+                  styles.actionText,
+                  { color: saved ? '#FFFFFF' : theme.text },
+                ]}
+              >
+                {saved ? 'Saved' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { borderColor: theme.border }]}
+              onPress={handleShare}
+              activeOpacity={0.85}
+              accessibilityLabel="Share this work"
+            >
+              <Ionicons name="share-outline" size={17} color={theme.text} />
+              <Text style={[styles.actionText, { color: theme.text }]}>
+                {shareNotice || 'Share'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {!!artwork.description && (
             <Text style={[styles.description, { color: theme.text }]}>
               {artwork.description}
@@ -331,11 +417,19 @@ const styles = StyleSheet.create({
   cardDesktop: {
     flexDirection: 'row',
   },
+  // Padding is what gives the work room to breathe. resizeMode="contain"
+  // fills whichever axis is constrained, so without an inset a portrait work
+  // touches the top and bottom edges and a landscape one touches the sides —
+  // the frame reads as a crop rather than a mount.
   galleryWrap: {
     width: '100%',
+    padding: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   galleryWrapDesktop: {
     width: '62%',
+    padding: 28,
   },
   image: {
     width: '100%',
@@ -344,6 +438,26 @@ const styles = StyleSheet.create({
   imageDesktop: {
     width: '100%',
     height: 620,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+    marginBottom: 4,
+  },
+  actionButton: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderRadius: 6,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   thumbRow: {
     gap: 8,

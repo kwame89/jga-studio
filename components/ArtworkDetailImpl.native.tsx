@@ -346,7 +346,11 @@ useEffect(() => {
           </View>
         </View>
 
-        <TouchableOpacity activeOpacity={0.92} onPress={() => setViewerVisible(true)}>
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={() => setViewerVisible(true)}
+          style={styles.imageFrame}
+        >
           <Image
             source={{ uri: artwork.image_url || '' }}
             style={styles.image}
@@ -489,11 +493,21 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       justifyContent: 'center',
       marginLeft: 8,
     },
+    // The inset is what gives the work room to breathe. resizeMode="contain"
+    // fills whichever axis is constrained, so without padding a portrait work
+    // sits flush against the top and bottom and a landscape one against the
+    // sides — it reads as a crop rather than a mount.
+    imageFrame: {
+      width: '100%',
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 6,
+      marginBottom: 20,
+    },
     image: {
       width: '100%',
       height: 320,
-      borderRadius: 6,
-      marginBottom: 20,
     },
     auctionBadge: {
       alignSelf: 'flex-start',
