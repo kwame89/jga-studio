@@ -1848,13 +1848,18 @@ const handleQrScanned = ({ data }: { data: string }) => {
                   Purchases earn 5% of the artwork purchase amount in JGA_STUDIO. Rewards accrue first and will be distributed from the treasury wallet when claimed.
                 </Text>
 
+                {/* Deliberately not `disabled` when there is nothing to
+                    claim. handleClaimRewards already explains the empty case,
+                    but a disabled TouchableOpacity swallows the press, so that
+                    explanation could never reach anyone — the button just
+                    looked broken. It still dims, so the state is legible. */}
                 <TouchableOpacity
                   style={[
                     styles.primaryButton,
-                    claimableRewardTotal <= 0 && { opacity: 0.6 },
+                    claimableRewardTotal <= 0 && styles.buttonDisabled,
                   ]}
                   onPress={handleClaimRewards}
-                  disabled={claimableRewardTotal <= 0}
+                  activeOpacity={0.85}
                 >
                   <Text style={styles.primaryButtonText}>Claim Rewards</Text>
                 </TouchableOpacity>
