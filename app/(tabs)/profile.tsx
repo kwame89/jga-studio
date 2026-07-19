@@ -1845,7 +1845,7 @@ const handleQrScanned = ({ data }: { data: string }) => {
                 </View>
 
                 <Text style={styles.cardText}>
-                  Purchases earn 5% of the artwork purchase amount in JGA_STUDIO. Rewards accrue first and will be distributed from the treasury wallet when claimed.
+                  Purchases earn 5% of the artwork purchase amount in JGA_STUDIO. Rewards accrue as you collect, and are sent to your wallet when you claim them.
                 </Text>
 
                 {/* Deliberately not `disabled` when there is nothing to
