@@ -24,6 +24,20 @@ const ERC20_ABI = [
   },
 ] as const
 
+// Browsers preflight this call (it carries Authorization + Content-Type), so
+// every response — including the OPTIONS preflight and every error path — must
+// carry these. Without them the browser blocks the request before it is sent
+// and the collector sees a generic "Failed to send a request to the Edge
+// Function", which says nothing about the real cause. Matches get-order and
+// collector-profile.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+}
+
+const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
+
 /**
  * Collector-facing error. Keep the message vague about internals — a claimant
  * should never learn which secret is unset or which wallet is empty — and put
@@ -32,11 +46,17 @@ const ERC20_ABI = [
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders,
   })
 }
 
 Deno.serve(async (req) => {
+  // Preflight must be answered before any auth work — it arrives without an
+  // Authorization header by design.
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -69,7 +89,7 @@ Deno.serve(async (req) => {
     if (!collectorWallet?.wallet_address) {
       return new Response(JSON.stringify({ error: 'No collector wallet found' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders,
       })
     }
 
@@ -98,7 +118,7 @@ Deno.serve(async (req) => {
     if (!total || total <= 0) {
       return new Response(JSON.stringify({ success: true, claimed: 0 }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: jsonHeaders,
       })
     }
 
@@ -271,12 +291,12 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true, hash, claimed: total }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: jsonHeaders,
     })
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error?.message || 'Claim failed' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: jsonHeaders,
     })
   }
 })
