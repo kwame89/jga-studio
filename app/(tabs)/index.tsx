@@ -700,8 +700,14 @@ const createStyles = (
       width: desktopWeb ? '68%' : '100%',
       aspectRatio: desktopWeb ? 1.3 : 0.94,
       position: 'relative',
-      // Match the hero background so a `contain`-fitted work floats flush
-      // instead of sitting inside a visibly lighter panel.
+      // Padding gives the featured work breathing room: resizeMode="contain"
+      // fills whichever axis is constrained, so without an inset a portrait
+      // work touches the top and bottom and a landscape one touches the sides.
+      // The frame background matches the hero, so the inset reads as space, not
+      // a panel.
+      padding: desktopWeb ? 34 : 20,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: '#080709',
     },
     heroImage: {
