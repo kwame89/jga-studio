@@ -1,38 +1,60 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 /**
- * The studio wordmark.
+ * The studio wordmark. Links to Home unless `link={false}`.
  *
- * NOTE: this deliberately does NOT link Home right now. Wrapping it in an
- * expo-router `Link` (tried with both Pressable and TouchableOpacity)
- * crashes React Native Web during render with "Failed to set an indexed
- * property [0] on CSSStyleDeclaration", which takes down the entire app at
- * startup rather than degrading the header. Linking the logo needs to be
- * reintroduced against a local repro, not straight to production.
+ * HISTORY: an earlier attempt wrapped this in an expo-router `<Link asChild>`
+ * and crashed React Native Web at render with "Failed to set an indexed
+ * property [0] on CSSStyleDeclaration" — and because the logo sits in every
+ * header, it took down the whole app at startup, not just the header (see the
+ * revert in 78c5f19). The `asChild` anchor path was the trigger, hit with both
+ * Pressable and TouchableOpacity as the child.
  *
- * The `link` prop is accepted and ignored so call sites do not have to
- * change when it comes back.
+ * This reintroduces the link WITHOUT `Link`: a plain TouchableOpacity, which
+ * renders a div on web — the same element every other button in the app uses —
+ * driven by an imperative router.push. That avoids the anchor/style path that
+ * broke before. Verified on the local dev server against a non-home screen.
  */
 export function StudioLogo({
   compact = false,
-  link: _link = true,
+  link = true,
 }: {
   compact?: boolean;
   link?: boolean;
 }) {
-  return (
-    <View
-      style={[styles.viewport, compact && styles.viewportCompact]}
-      accessibilityLabel="JGA Studio"
-      accessibilityRole="image"
-    >
+  const router = useRouter();
+
+  const mark = (
+    <View style={[styles.viewport, compact && styles.viewportCompact]}>
       <Image
         source={require('../assets/jga-studio-logo.png')}
         style={styles.image}
         resizeMode="cover"
       />
     </View>
+  );
+
+  // Non-linking placements (e.g. the empty-hero on Home, where linking to Home
+  // is pointless) render the plain mark.
+  if (!link) {
+    return (
+      <View accessibilityLabel="JGA Studio" accessibilityRole="image">
+        {mark}
+      </View>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push('/')}
+      activeOpacity={0.7}
+      accessibilityRole="link"
+      accessibilityLabel="JGA Studio — go to Home"
+    >
+      {mark}
+    </TouchableOpacity>
   );
 }
 
