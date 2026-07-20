@@ -160,19 +160,20 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
           'Because these are original works, sales are final once a piece has ' +
             'shipped. For these terms, an order has "shipped" when it has been ' +
             'handed to the carrier — not when a label is created.',
-          'You may cancel an order any time before it has been handed to the ' +
-            'carrier, for a full refund. Card refunds are returned to the card ' +
-            'used; crypto refunds are made to the wallet the payment came from, ' +
-            'net of network fees. [[Confirm whether commissioned or custom ' +
-            'works, and any digital items or token rewards, follow different ' +
-            'rules — e.g. custom work non-cancellable once begun.]]',
+          'You may cancel a physical-artwork order any time before it has been ' +
+            'handed to the carrier, for a full refund. Card refunds are ' +
+            'returned to the card used; crypto refunds are made to the wallet ' +
+            'the payment came from, net of network fees.',
+          'Digital works, including pieces sold as NFTs, are delivered to your ' +
+            'wallet on a public blockchain. That transfer is final and ' +
+            'irreversible, so digital works are non-refundable once delivered. ' +
+            'Token rewards ($JGA) are likewise non-refundable.',
           'If a work arrives damaged in transit, notify the studio within 7 ' +
             'days of delivery. Keep all packaging and send photos of the ' +
             'artwork, the damage, the outer shipping box, the interior ' +
             'packaging, and the shipping label — these are needed to document ' +
             'the carrier insurance claim. Where a work is damaged in shipping ' +
-            'to you, you may return it and the studio covers return shipping. ' +
-            '[[Confirm the 7-day window, or change to e.g. 5 business days.]]',
+            'to you, you may return it and the studio covers return shipping.',
         ],
       },
       {
@@ -225,8 +226,6 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
             'reproductions), sublicense any rights, mint the work as an NFT or ' +
             'digital collectible, or use the work or its images to train AI ' +
             'models or build datasets.',
-          '[[The NFT-minting and AI-training clauses are protective defaults — ' +
-            'keep or drop them to taste.]]',
         ],
       },
       {
