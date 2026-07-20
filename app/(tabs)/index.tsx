@@ -522,11 +522,13 @@ export default function Home() {
                         style={styles.auctionCard}
                         activeOpacity={0.9}
                       >
-                        <Image
-                          source={{ uri: lot.imageUrl }}
-                          style={styles.auctionImage}
-                          resizeMode="contain"
-                        />
+                        <View style={styles.auctionImageFrame}>
+                          <Image
+                            source={{ uri: lot.imageUrl }}
+                            style={styles.auctionImage}
+                            resizeMode="contain"
+                          />
+                        </View>
                         <View style={styles.auctionCopy}>
                           <View style={styles.auctionStatusRow}>
                             <Text style={styles.auctionStatus}>
@@ -912,6 +914,11 @@ const createStyles = (
     categoryImageFrame: {
       width: '100%',
       aspectRatio: 1.45,
+      // Padding + center so a contain-fitted cover shows the whole work with
+      // breathing room, and the tile tint reads as a mat rather than a crop.
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.isDark ? '#0E0D10' : '#E7E4DF',
     },
     categoryImage: {
@@ -981,6 +988,9 @@ const createStyles = (
     collectionImageFrame: {
       width: '100%',
       aspectRatio: 1.22,
+      padding: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
       borderRadius: 5,
       overflow: 'hidden',
@@ -1013,10 +1023,17 @@ const createStyles = (
       overflow: 'hidden',
       backgroundColor: theme.card,
     },
-    auctionImage: {
+    auctionImageFrame: {
       width: '100%',
       aspectRatio: 1,
+      padding: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
+    },
+    auctionImage: {
+      width: '100%',
+      height: '100%',
     },
     auctionCopy: {
       padding: 13,

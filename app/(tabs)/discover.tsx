@@ -651,6 +651,10 @@ const createStyles = (
       aspectRatio: desktopWeb ? 1.45 : 1.18,
       position: 'relative',
       overflow: 'hidden',
+      // Whole cover shown with breathing room, not cropped to the tile.
+      padding: desktopWeb ? 24 : 16,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.isDark ? '#111013' : '#E7E4DF',
       borderRadius: 5,
     },

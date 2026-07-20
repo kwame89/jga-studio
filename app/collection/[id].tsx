@@ -265,6 +265,10 @@ const createStyles = (
     hero: {
       width: desktopWeb ? '62%' : '100%',
       aspectRatio: desktopWeb ? 1.18 : 1.06,
+      // Whole cover shown with breathing room, matching the artwork detail hero.
+      padding: desktopWeb ? 28 : 18,
+      alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: theme.card,
     },
     heroStory: {
