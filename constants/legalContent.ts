@@ -67,9 +67,9 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
     title: 'Terms and Conditions',
     intro:
       'These terms govern your use of JGA Studio and any purchase of original ' +
-      'artwork, edition, or digital item through it. By buying, bidding, or ' +
-      'creating an account, you agree to them. Please read the auction, ' +
-      'shipping, and rewards sections closely.',
+      'artwork or edition through it. By buying, bidding, or creating an ' +
+      'account, you agree to them. Please read the auction, shipping, and ' +
+      'rewards sections closely.',
     sections: [
       {
         heading: 'Who you are dealing with',
@@ -160,14 +160,10 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
           'Because these are original works, sales are final once a piece has ' +
             'shipped. For these terms, an order has "shipped" when it has been ' +
             'handed to the carrier — not when a label is created.',
-          'You may cancel a physical-artwork order any time before it has been ' +
-            'handed to the carrier, for a full refund. Card refunds are ' +
-            'returned to the card used; crypto refunds are made to the wallet ' +
-            'the payment came from, net of network fees.',
-          'Digital works, including pieces sold as NFTs, are delivered to your ' +
-            'wallet on a public blockchain. That transfer is final and ' +
-            'irreversible, so digital works are non-refundable once delivered. ' +
-            'Token rewards ($JGA) are likewise non-refundable.',
+          'You may cancel an order any time before it has been handed to the ' +
+            'carrier, for a full refund. Card refunds are returned to the card ' +
+            'used; crypto refunds are made to the wallet the payment came from, ' +
+            'net of network fees.',
           'If a work arrives damaged in transit, notify the studio within 7 ' +
             'days of delivery. Keep all packaging and send photos of the ' +
             'artwork, the damage, the outer shipping box, the interior ' +
