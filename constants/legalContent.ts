@@ -338,13 +338,28 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         ],
       },
       {
-        heading: 'Onchain information is public and permanent',
+        // Studio-supplied wording (Onchain Information Clause v1). Kept
+        // verbatim as Jay's chosen legal text — do not paraphrase.
+        heading: 'Onchain information',
         paragraphs: [
-          'Blockchain transactions — including USDC payments and $JGA rewards ' +
-            'on the Base network — are recorded on a public ledger. A wallet ' +
-            'address and its transaction history are public, permanent, and ' +
-            'outside the studio’s control. They cannot be edited or deleted, by ' +
-            'us or by anyone. Keep this in mind when you connect a wallet.',
+          'Onchain activity is optional. If you pay by card and do not claim ' +
+            '$JGA rewards, your purchase does not require a blockchain ' +
+            'transaction. If you choose to pay with USDC or claim $JGA rewards, ' +
+            'those actions take place on the Base network and involve a real ' +
+            'onchain transaction connected to the wallet address you use.',
+          'When you make a USDC payment, the transaction may show the wallet ' +
+            'address used, the amount, the token, the network, timestamps, and ' +
+            'related transaction data. When you claim $JGA rewards, the claim ' +
+            'may show the wallet address used, the amount of $JGA transferred, ' +
+            'the token contract, the network, timestamps, and related ' +
+            'transaction data. This information is recorded on a public ' +
+            'blockchain and may be visible through blockchain explorers such ' +
+            'as BaseScan.',
+          'We do not control public blockchains, blockchain explorers, wallet ' +
+            'providers, or the Zora platform. Blockchain transactions may be ' +
+            'public, permanent, and difficult or impossible to delete or ' +
+            'reverse. You should only use a wallet address that you are ' +
+            'comfortable using for these optional onchain activities.',
         ],
       },
       {
