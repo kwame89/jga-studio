@@ -43,15 +43,15 @@ Per-payment-method settlement:
 Rationale: the studio wants to keep accumulating USDC from crypto payers while
 taking card revenue in USD.
 
-⚠️ **Nuance to plan around:** "hold USDC" means USDC sits in the *Stripe*
-balance, not in the studio's own Base treasury wallet. Getting it to the
-treasury is a separate **payout to an external wallet** step (timing/fees TBD).
-This still achieves the accumulate-USDC goal and still allows fully deleting the
-manual rail — it just adds a periodic payout, not a per-order on-chain receipt.
+**How to achieve it (confirmed 2026):** in Stripe Dashboard → Settings →
+Payouts, set a **designated USDC payout wallet** (currency USDC) — point it at
+the studio's Base treasury wallet. Crypto payments then settle as USDC and pay
+out to the treasury automatically; card payments continue to USD. This is
+better than holding USDC in the Stripe balance: no separate manual payout, and
+the USDC lands in the studio's own wallet, not Stripe's balance.
 
-**To confirm on the Stripe dashboard:** that settlement currency can be set
-*per payment method* (USDC held, card → USD) rather than account-wide, and that
-USDC payout to an external Base wallet is available.
+**To confirm on the dashboard:** that the USDC payout wallet + Base network are
+both available to the account after approval.
 
 ## 3. What changes
 
@@ -68,9 +68,11 @@ USDC payout to an external Base wallet is available.
 - **`components/BuyArtworkPanel.tsx`** → remove the manual USDC UI (address
   display, tx-hash entry, confirm-polling). One "Proceed to checkout" button;
   the buyer picks card or USDC on Stripe's hosted page.
-- **`stripe-webhook`** → verify (do not assume) that a USDC-settled session
-  fires the same `checkout.session.completed` / paid event and marks the order
-  paid identically to a card session.
+- **`stripe-webhook`** → per Stripe (2026), existing webhooks work unchanged
+  for stablecoin charges; the paid event fires the same, with
+  `payment_method.type` = `crypto` instead of `card`. Likely no code change —
+  still smoke-test a real USDC session, and use `payment_method.type` if orders
+  should record which method paid.
 
 ### Keep
 - `orders.rail` and the `payments` columns (`amount_usdc`, `tx_hash`) — leave
@@ -80,12 +82,17 @@ USDC payout to an external Base wallet is available.
 
 ## 4. Rewards — verify, don't assume
 
-`reward_events` are only read/written by `claim-rewards`; **`create-order` never
-creates a reward.** So purchases do not appear to auto-grant rewards in the
-commerce functions — rewards look seeded/granted separately. This migration
-therefore probably does not touch rewards. **Confirm how a purchase becomes a
-reward before finalizing**, so a link that isn't visible in these functions
-isn't broken.
+Investigated (2026-07-21): **nothing in the repo creates a `reward_events` row
+on purchase.** `create-order` doesn't, no migration/trigger does, and the
+rewards spec ([06 §"State of reality"](06-rewards.md)) admits the reward tables
+"exist in the live DB, but no migration creates them." The `purchase` accrual
+(10 $JGA / $1 at `paid`, per [06 §2](06-rewards.md)) is **specified but not
+implemented**; the one existing reward was a manual/legacy insert.
+
+So this migration cannot break rewards — there is no live purchase→reward link.
+And when accrual is built, it should hang off the `paid` transition, which the
+Stripe rail fires identically for card and USDC. The migration is compatible
+with the intended design; accrual is a separate future task.
 
 ## 5. Prerequisites (studio, before any code)
 
