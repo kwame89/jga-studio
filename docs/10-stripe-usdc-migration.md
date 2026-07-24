@@ -1,6 +1,6 @@
 # 10 — Stripe-native USDC Migration
 
-**Status:** Plan v0.1 · 2026-07-21 · not started
+**Status:** v0.2 · 2026-07-24 · §6 step 2 IMPLEMENTED (create-order, BuyArtworkPanel, stripe-webhook) — awaiting the studio's live USDC checkout test (§6 step 3); manual-rail functions still deployed as rollback until step 4
 
 Plan to replace the manual USDC-on-Base rail with Stripe-native USDC, so both
 card and crypto run through the one processor already in use. Supersedes the

@@ -13,30 +13,19 @@ import { usePrivy } from '../lib/privy';
 import { callCommerceFunction } from '../lib/commerceApi';
 import { useTheme } from '../themeContext';
 
-// Web-first checkout panel (docs/build-packet 1-commerce): dual rail.
-// - Card: create-order returns a Stripe Checkout URL; server owns the price.
-// - USDC on Base: create-order returns the treasury address + exact amount;
-//   the buyer sends from any wallet, pastes the tx hash, and
-//   confirm-crypto-payment verifies it onchain before the order is paid.
-// Requires sign-in (no guest checkout, per spec).
+// Checkout panel, shared by the web and native artwork detail pages: dual
+// rail, one processor (docs/10). Both buttons create a server-priced order via
+// create-order and open a Stripe Checkout URL — "card" lands on the card page,
+// "USDC on Base" on Stripe's stablecoin page. Stripe owns network/address/
+// amount; the webhook marks the order paid. Requires sign-in (no guest
+// checkout, per spec).
 
 type Quote = {
   orderId: string;
   totalCents: number;
-  usdc?: {
-    network: string;
-    token: string;
-    to: string;
-    amount: string;
-    holdExpiresAt: string;
-  };
 };
 
 type Rail = 'stripe' | 'crypto';
-
-function dollars(cents: number) {
-  return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-}
 
 export function BuyArtworkPanel({
   artPieceId,
@@ -61,10 +50,6 @@ export function BuyArtworkPanel({
   const [zip, setZip] = useState('');
   const [busyRail, setBusyRail] = useState<Rail | null>(null);
   const [error, setError] = useState('');
-  const [cryptoQuote, setCryptoQuote] = useState<Quote | null>(null);
-  const [txHash, setTxHash] = useState('');
-  const [cryptoStatus, setCryptoStatus] = useState('');
-  const [checking, setChecking] = useState(false);
 
   const addressComplete = useMemo(
     () => [name, line1, city, state, zip].every((v) => v.trim().length > 0),
@@ -83,60 +68,24 @@ export function BuyArtworkPanel({
         shipping: { name, line1, line2: line2 || undefined, city, state, zip },
       });
 
-      if (rail === 'stripe') {
-        if (!data?.url) throw new Error('Stripe did not return a checkout link');
-        if (Platform.OS === 'web') {
-          window.location.assign(data.url);
-        } else {
-          // In-app browser (SFSafariViewController / Chrome Custom Tab) so the
-          // collector stays inside the app and returns when done. The order is
-          // created server-side and marked paid by the Stripe webhook, so
-          // fulfillment does not depend on the browser returning.
-          const WebBrowser = await import('expo-web-browser');
-          await WebBrowser.openBrowserAsync(data.url);
-        }
-        return;
+      // Both rails are Stripe Checkout now (docs/10): "stripe" lands on the
+      // card page, "crypto" on Stripe's USDC payment page. Stripe owns the
+      // network, address, and amount — no more manual send-and-verify.
+      if (!data?.url) throw new Error('Stripe did not return a checkout link');
+      if (Platform.OS === 'web') {
+        window.location.assign(data.url);
+      } else {
+        // In-app browser (SFSafariViewController / Chrome Custom Tab) so the
+        // collector stays inside the app and returns when done. The order is
+        // created server-side and marked paid by the Stripe webhook, so
+        // fulfillment does not depend on the browser returning.
+        const WebBrowser = await import('expo-web-browser');
+        await WebBrowser.openBrowserAsync(data.url);
       }
-      setCryptoQuote(data as Quote);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start checkout');
     } finally {
       setBusyRail(null);
-    }
-  }
-
-  async function submitAndCheck() {
-    if (!cryptoQuote) return;
-    setError('');
-    setChecking(true);
-    setCryptoStatus('');
-    try {
-      const accessToken = await getAccessToken();
-      if (!accessToken) throw new Error('Please sign in again to continue.');
-      if (txHash.trim()) {
-        await callCommerceFunction('submit-crypto-payment', accessToken, {
-          orderId: cryptoQuote.orderId,
-          txHash: txHash.trim(),
-        });
-      }
-      const confirm = await callCommerceFunction<{ status: string; reason?: string }>(
-        'confirm-crypto-payment',
-        accessToken,
-        { orderId: cryptoQuote.orderId }
-      );
-      if (confirm.status === 'confirmed') {
-        router.push(`/checkout/success?order=${cryptoQuote.orderId}`);
-        return;
-      }
-      setCryptoStatus(
-        confirm.status === 'failed'
-          ? `Payment check failed: ${confirm.reason ?? 'unknown reason'}`
-          : confirm.reason ?? 'Still confirming — check again in a moment'
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not verify payment');
-    } finally {
-      setChecking(false);
     }
   }
 
@@ -186,9 +135,7 @@ export function BuyArtworkPanel({
         Ships within the US · flat-rate shipping added at checkout · NJ orders include sales tax.
       </Text>
 
-      {!cryptoQuote && (
-        <>
-          <View style={styles.form}>
+      <View style={styles.form}>
             <TextInput style={[styles.input, inputTheme(theme)]} placeholder="Full name" placeholderTextColor={ph(theme)} value={name} onChangeText={setName} />
             <TextInput style={[styles.input, inputTheme(theme)]} placeholder="Address line 1" placeholderTextColor={ph(theme)} value={line1} onChangeText={setLine1} />
             <TextInput style={[styles.input, inputTheme(theme)]} placeholder="Address line 2 (optional)" placeholderTextColor={ph(theme)} value={line2} onChangeText={setLine2} />
@@ -224,44 +171,6 @@ export function BuyArtworkPanel({
               </Text>
             )}
           </TouchableOpacity>
-        </>
-      )}
-
-      {cryptoQuote?.usdc && (
-        <View style={styles.cryptoBox}>
-          <Text style={[styles.cryptoHeading, { color: theme.text }]}>
-            Send exactly {cryptoQuote.usdc.amount} USDC on Base
-          </Text>
-          <Text style={[styles.mono, { color: theme.text }]} selectable>
-            {cryptoQuote.usdc.to}
-          </Text>
-          <Text style={[styles.help, { color: theme.text }]}>
-            Total {dollars(cryptoQuote.totalCents)} · from any wallet on the Base network · your
-            reservation holds for 30 minutes. After sending, paste the transaction hash:
-          </Text>
-          <TextInput
-            style={[styles.input, inputTheme(theme)]}
-            placeholder="0x… transaction hash"
-            placeholderTextColor={ph(theme)}
-            autoCapitalize="none"
-            value={txHash}
-            onChangeText={setTxHash}
-          />
-          <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: theme.accent }, checking && styles.disabled]}
-            disabled={checking}
-            onPress={submitAndCheck}
-          >
-            {checking ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryBtnText}>I sent it — verify payment</Text>
-            )}
-          </TouchableOpacity>
-          {!!cryptoStatus && <Text style={[styles.help, { color: theme.text }]}>{cryptoStatus}</Text>}
-        </View>
-      )}
-
       {!!error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
@@ -353,18 +262,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     disabled: {
       opacity: 0.5,
-    },
-    cryptoBox: {
-      marginTop: 6,
-      gap: 10,
-    },
-    cryptoHeading: {
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    mono: {
-      fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-      fontSize: 13,
     },
     error: {
       color: '#C7654D',

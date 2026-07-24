@@ -10,15 +10,17 @@
 //   -> lazily cancels any expired pending order on the piece (no cron)
 //   -> inserts the order (a partial unique index makes double-selling a
 //      database error, not a race)
-//   -> stripe: returns a Stripe Checkout URL (30-min expiry)
-//   -> crypto: returns treasury address + exact USDC amount to send on Base
+//   -> returns a Stripe Checkout URL (30-min expiry). Both rails are Stripe
+//      Checkout sessions (docs/10): "stripe" restricts to card, "crypto" to
+//      Stripe's stablecoin payment method (USDC; Base among the networks).
 //
 // Totals: flat US shipping (SHIPPING_FLAT_CENTS, default $65) and NJ sales
 // tax 6.625% on subtotal+shipping for NJ addresses only (docs/01 §8). US
 // shipping only for now.
 //
-// Secrets: STRIPE_SECRET_KEY (exists), TREASURY_ADDRESS, SITE_URL.
-// Deploy with JWT verification ON (callers are signed-in buyers).
+// Secrets: STRIPE_SECRET_KEY, SITE_URL.
+// Deploy with --no-verify-jwt (Privy verification in _shared/privyAuth is
+// the auth — a Privy token is not a Supabase JWT).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14";
@@ -27,7 +29,6 @@ import { verifyPrivyUser } from "../_shared/privyAuth.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
-const TREASURY_ADDRESS = Deno.env.get("TREASURY_ADDRESS");
 const SITE_URL = (Deno.env.get("SITE_URL") ?? "https://jga-studio.vercel.app").replace(/\/+$/, "");
 const SHIPPING_FLAT_CENTS = Number(Deno.env.get("SHIPPING_FLAT_CENTS") ?? 6500);
 const NJ_TAX_RATE = 0.06625;
@@ -83,11 +84,9 @@ Deno.serve(async (req) => {
     if (!validAddress(shipping)) {
       return jsonResponse({ error: "Complete shipping address required (name, line1, city, state, zip)" }, 400);
     }
-    if (rail === "crypto" && !TREASURY_ADDRESS) {
-      return jsonResponse({ error: "Crypto payments are not configured yet" }, 503);
-    }
-    if (rail === "stripe" && !STRIPE_SECRET_KEY) {
-      return jsonResponse({ error: "Card payments are not configured yet" }, 503);
+    // Both rails are Stripe Checkout sessions now, so one secret gates both.
+    if (!STRIPE_SECRET_KEY) {
+      return jsonResponse({ error: "Payments are not configured yet" }, 503);
     }
 
     // --- Load the piece; server is the only source of price -----------------
@@ -144,12 +143,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: orderError.message }, 500);
     }
 
-    // --- Rail-specific payment setup ----------------------------------------
-    if (rail === "stripe") {
+    // --- Payment setup -------------------------------------------------------
+    // Both rails now go through Stripe Checkout (docs/10). "crypto" restricts
+    // the session to Stripe's stablecoin payment method (USDC — Base among the
+    // supported networks), so the button the collector tapped lands them on
+    // the matching payment page. Stripe owns network/address/amount, which
+    // retires the manual send-to-treasury flow and its wrong-amount /
+    // wrong-network / expired-quote failure modes.
+    {
       const stripe = new Stripe(STRIPE_SECRET_KEY!, { apiVersion: "2024-06-20" });
+      const paymentMethodTypes = (rail === "crypto" ? ["crypto"] : ["card"]) as
+        Stripe.Checkout.SessionCreateParams.PaymentMethodType[];
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        payment_method_types: ["card"],
+        payment_method_types: paymentMethodTypes,
         line_items: [
           {
             price_data: {
@@ -172,7 +179,9 @@ Deno.serve(async (req) => {
 
       await supabase.from("payments").insert({
         order_id: order.id,
-        rail: "stripe",
+        // Keep the collector's chosen rail for records (card vs USDC); the
+        // webhook matches payments by stripe_session_id, not rail.
+        rail,
         status: "pending",
         amount_cents: totalCents,
         stripe_session_id: session.id,
@@ -181,29 +190,6 @@ Deno.serve(async (req) => {
 
       return jsonResponse({ orderId: order.id, rail, url: session.url, totalCents });
     }
-
-    // crypto: USDC has 6 decimals; cents -> micro-USDC is *10^4 (1:1 USD peg).
-    const amountUsdc = totalCents * 10_000;
-    await supabase.from("payments").insert({
-      order_id: order.id,
-      rail: "crypto",
-      status: "pending",
-      amount_usdc: amountUsdc,
-    });
-
-    return jsonResponse({
-      orderId: order.id,
-      rail,
-      totalCents,
-      usdc: {
-        network: "Base",
-        token: "USDC",
-        to: TREASURY_ADDRESS,
-        amount: (totalCents / 100).toFixed(2),
-        amountMicro: String(amountUsdc),
-        holdExpiresAt: holdExpires,
-      },
-    });
   } catch (err) {
     return jsonResponse({ error: err instanceof Error ? err.message : "Unexpected error" }, 500);
   }

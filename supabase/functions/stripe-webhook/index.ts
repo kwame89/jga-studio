@@ -92,7 +92,10 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("order_id", orderId)
-          .eq("rail", "stripe");
+          // Match the session, not the rail: since docs/10 both card and USDC
+          // payments are Stripe Checkout sessions (rail records the button the
+          // collector chose, "stripe" or "crypto").
+          .eq("stripe_session_id", session.id);
         await supabase
           .from("orders")
           .update({
@@ -123,7 +126,7 @@ Deno.serve(async (req) => {
           .from("payments")
           .update({ status: "failed", failure_reason: "checkout session expired", updated_at: new Date().toISOString() })
           .eq("order_id", orderId)
-          .eq("rail", "stripe")
+          .eq("stripe_session_id", session.id)
           .eq("status", "pending");
         break;
       }
