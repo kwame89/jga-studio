@@ -7,8 +7,12 @@
 // or impossible transitions no-op with a log line rather than erroring.
 //
 // Events handled:
-//   checkout.session.completed  -> payment succeeded; order paid; piece sold
-//   checkout.session.expired    -> cancel order if still pending (hold release)
+//   checkout.session.completed                -> paid (sync methods e.g. card);
+//                                                async methods: extend hold, wait
+//   checkout.session.async_payment_succeeded  -> paid (delayed methods, e.g.
+//                                                stablecoins confirming onchain)
+//   checkout.session.async_payment_failed     -> cancel order, release hold
+//   checkout.session.expired                  -> cancel order if still pending
 //   charge.refunded             -> order refunded; piece released for sale
 //
 // Secrets: STRIPE_SECRET_KEY (exists), STRIPE_WEBHOOK_SECRET (from the
@@ -66,50 +70,117 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: dedupeError.message }, 500);
   }
 
+  // The shared "money arrived" path. Reached from checkout.session.completed
+  // (synchronous methods like cards, payment_status already "paid") and from
+  // checkout.session.async_payment_succeeded (delayed methods — notably
+  // stablecoin payments, which confirm onchain after the buyer finishes the
+  // Checkout flow).
+  async function markSessionPaid(session: Stripe.Checkout.Session) {
+    const orderId = session.metadata?.order_id ?? session.client_reference_id;
+    if (!orderId) return;
+
+    const { data: order } = await supabase
+      .from("orders")
+      .select("id, status, art_piece_id")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (!order || order.status !== "pending_payment") {
+      console.log(`paid event for order ${orderId} in state ${order?.status ?? "missing"} — no-op`);
+      return;
+    }
+
+    await supabase
+      .from("payments")
+      .update({
+        status: "succeeded",
+        stripe_payment_intent:
+          typeof session.payment_intent === "string" ? session.payment_intent : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("order_id", orderId)
+      // Match the session, not the rail: since docs/10 both card and USDC
+      // payments are Stripe Checkout sessions (rail records the button the
+      // collector chose, "stripe" or "crypto").
+      .eq("stripe_session_id", session.id);
+    await supabase
+      .from("orders")
+      .update({
+        status: "paid",
+        // Buyers authenticate with Privy (no email in the token), so the
+        // receipt email comes from Stripe's own collection at checkout.
+        email: session.customer_details?.email ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+    await supabase
+      .from("art_pieces")
+      .update({ sold_at: new Date().toISOString() })
+      .eq("id", order.art_piece_id);
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const orderId = session.metadata?.order_id ?? session.client_reference_id;
-        if (!orderId) break;
 
-        const { data: order } = await supabase
-          .from("orders")
-          .select("id, status, art_piece_id")
-          .eq("id", orderId)
-          .maybeSingle();
-        if (!order || order.status !== "pending_payment") {
-          console.log(`completed event for order ${orderId} in state ${order?.status ?? "missing"} — no-op`);
+        // Async payment methods (stablecoins confirming onchain, bank debits)
+        // complete the session with payment_status "unpaid"; the money arrives
+        // later via async_payment_succeeded. Marking paid here would sell the
+        // piece before funds exist — and NOT handling the async event at all
+        // was the original bug: a USDC payment succeeded on Stripe while the
+        // order stayed pending and the work never flipped to sold.
+        if (session.payment_status !== "paid") {
+          const orderId = session.metadata?.order_id ?? session.client_reference_id;
+          console.log(
+            `session ${session.id} completed with payment_status=${session.payment_status} — awaiting async payment`
+          );
+          if (orderId) {
+            // Keep the in-flight payment from being reaped: mark the payment
+            // row processing and push the hold out so create-order's lazy
+            // expiry cannot cancel an order whose funds are confirming.
+            await supabase
+              .from("payments")
+              .update({ status: "processing", updated_at: new Date().toISOString() })
+              .eq("stripe_session_id", session.id)
+              .eq("status", "pending");
+            await supabase
+              .from("orders")
+              .update({
+                hold_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", orderId)
+              .eq("status", "pending_payment");
+          }
           break;
         }
 
+        await markSessionPaid(session);
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        await markSessionPaid(event.data.object as Stripe.Checkout.Session);
+        break;
+      }
+
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const orderId = session.metadata?.order_id ?? session.client_reference_id;
+        if (!orderId) break;
         await supabase
           .from("payments")
           .update({
-            status: "succeeded",
-            stripe_payment_intent:
-              typeof session.payment_intent === "string" ? session.payment_intent : null,
+            status: "failed",
+            failure_reason: "async payment failed",
             updated_at: new Date().toISOString(),
           })
-          .eq("order_id", orderId)
-          // Match the session, not the rail: since docs/10 both card and USDC
-          // payments are Stripe Checkout sessions (rail records the button the
-          // collector chose, "stripe" or "crypto").
           .eq("stripe_session_id", session.id);
         await supabase
           .from("orders")
-          .update({
-            status: "paid",
-            // Buyers authenticate with Privy (no email in the token), so the
-            // receipt email comes from Stripe's own collection at checkout.
-            email: session.customer_details?.email ?? null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", orderId);
-        await supabase
-          .from("art_pieces")
-          .update({ sold_at: new Date().toISOString() })
-          .eq("id", order.art_piece_id);
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("id", orderId)
+          .eq("status", "pending_payment");
         break;
       }
 
