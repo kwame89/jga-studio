@@ -33,25 +33,24 @@ Sources (2026): Stripe stablecoin acceptance docs; Bridge acquisition analysis.
 Confirm exact integration mechanics against Stripe's current crypto docs when
 enabling, since the product is evolving.
 
-## 2. Settlement decision (locked)
+## 2. Settlement (REVISED 2026-07-24 — corrected against Stripe's own docs)
 
-Per-payment-method settlement:
+Original intent: USDC payments held as USDC and paid out to the Base treasury;
+card payments to USD.
 
-- **Crypto (USDC) payments → held as USDC** in the Stripe balance.
-- **Card payments → settled to USD.**
+**Reality check:** payouts to an external crypto wallet are a Stripe *Connect*
+feature (platforms paying their sellers), US-only, and currently limited to
+individuals/sole proprietors — not available to a standard merchant account,
+and explicitly not to companies (docs.stripe.com/connect/stablecoin-payouts).
+The earlier "Settings → Payouts → add USDC wallet" instruction came from
+third-party articles and does not exist for this account.
 
-Rationale: the studio wants to keep accumulating USDC from crypto payers while
-taking card revenue in USD.
-
-**How to achieve it (confirmed 2026):** in Stripe Dashboard → Settings →
-Payouts, set a **designated USDC payout wallet** (currency USDC) — point it at
-the studio's Base treasury wallet. Crypto payments then settle as USDC and pay
-out to the treasury automatically; card payments continue to USD. This is
-better than holding USDC in the Stripe balance: no separate manual payout, and
-the USDC lands in the studio's own wallet, not Stripe's balance.
-
-**To confirm on the dashboard:** that the USDC payout wallet + Base network are
-both available to the account after approval.
+**Settled position:** all revenue — card and USDC — settles to USD in the
+studio bank account (1.5% fee on the USDC side). The accumulate-USDC goal is
+served separately: periodically buy USDC into the Base treasury from settled
+USD, or, if volume ever justifies it, open a direct Bridge account. The old
+manual direct-to-treasury rail remains the only true direct-to-wallet receipt
+path; it stays available as the §6 rollback until step 4.
 
 ## 3. What changes
 
