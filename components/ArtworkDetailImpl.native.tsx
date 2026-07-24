@@ -15,11 +15,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageViewing from 'react-native-image-viewing';
-import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../supabaseClient';
 import { useTheme } from '../themeContext';
 import { StudioLogo } from './StudioLogo';
 import { ProvenanceRecord, type ProvenanceEvent } from './ProvenanceRecord';
+import { BuyArtworkPanel } from './BuyArtworkPanel';
 import { useGoBack } from '../lib/useGoBack';
 import {
   getStudioCategory,
@@ -93,13 +93,11 @@ export default function ArtworkDetailImpl() {
   const goBack = useGoBack('/(tabs)/discover');
   const theme = useTheme();
   const styles = createStyles(theme);
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
  const [artwork, setArtwork] = useState<Artwork | null>(null);
 const [loading, setLoading] = useState(true);
 const [saved, setSaved] = useState(false);
 const [viewerVisible, setViewerVisible] = useState(false);
-const [checkoutLoading, setCheckoutLoading] = useState(false);
 const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -202,87 +200,10 @@ useEffect(() => {
     );
   };
 
-  const handleCheckout = async () => {
-    if (!artwork?.price_usd) {
-      Alert.alert('Unavailable', 'This artwork does not currently have a checkout price.');
-      return;
-    }
-
-    if (artwork.is_auction) {
-      handlePlaceBid();
-      return;
-    }
-
-    try {
-      setCheckoutLoading(true);
-
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !anonKey) {
-        Alert.alert('Missing config', 'Supabase public env vars are not set.');
-        return;
-      }
-
-      const fnUrl = `${supabaseUrl}/functions/v1/create-payment-intent`;
-
-      const response = await fetch(fnUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${anonKey}`,
-          apikey: anonKey,
-        },
-        body: JSON.stringify({
-          artworkId: artwork.id,
-          amount: Math.round(Number(artwork.price_usd) * 100),
-          currency: 'usd',
-          title: artwork.title,
-        }),
-      });
-
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw new Error(json?.error || 'Could not create payment intent.');
-      }
-
-      const clientSecret = json?.clientSecret;
-      if (!clientSecret) {
-        throw new Error('Missing client secret from Edge Function.');
-      }
-
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'JGA Studio',
-        paymentIntentClientSecret: clientSecret,
-        defaultBillingDetails: {
-          name: 'Collector',
-        },
-        applePay: {
-          merchantCountryCode: 'US',
-        },
-      });
-
-      if (initError) {
-        Alert.alert('Payment setup failed', initError.message);
-        return;
-      }
-
-      const { error: paymentError } = await presentPaymentSheet();
-
-      if (paymentError) {
-        Alert.alert('Payment failed', paymentError.message);
-        return;
-      }
-
-      Alert.alert('Payment complete', 'Your purchase was successful.');
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert('Checkout error', error?.message || 'Something went wrong.');
-    } finally {
-      setCheckoutLoading(false);
-    }
-  };
+  // Buy-now checkout is handled by <BuyArtworkPanel> rendered inline below —
+  // the same server-priced, Privy-authed create-order → Stripe Checkout flow
+  // the web detail page uses. The old Payment Sheet path (create-payment-intent)
+  // was removed: it was client-priced, anon-authed, and created no order.
 
   const displayPrice = useMemo(() => formatPrice(artwork?.price_usd), [artwork?.price_usd]);
   const auctionCountdown = useMemo(
@@ -403,6 +324,16 @@ useEffect(() => {
 
         <ProvenanceRecord events={artwork.provenance_events} />
 
+        {!artwork.is_auction && (
+          <View style={styles.buyPanel}>
+            <BuyArtworkPanel
+              artPieceId={artwork.id}
+              priceUsd={artwork.price_usd}
+              soldAt={undefined}
+            />
+          </View>
+        )}
+
         <View style={styles.shipping}>
           <Text style={styles.shippingTitle}>Estimated Shipping (Domestic US)</Text>
           <Text style={styles.shippingPrice}>$45 – $85</Text>
@@ -418,30 +349,20 @@ useEffect(() => {
         </Text>
       </ScrollView>
 
-      <View style={styles.bottomBar}>
-        <View style={styles.bottomBarTextWrap}>
-          <Text style={styles.bottomBarLabel}>
-            {artwork.is_auction ? 'Auction Status' : 'Available'}
-          </Text>
-          <Text style={styles.bottomBarPrice}>
-            {artwork.is_auction ? auctionCountdown : displayPrice || 'Price on request'}
-          </Text>
-        </View>
+      {/* Sticky bar is auction-only now. Buy-now lives in the inline
+          BuyArtworkPanel above, matching the web detail page. */}
+      {artwork.is_auction && (
+        <View style={styles.bottomBar}>
+          <View style={styles.bottomBarTextWrap}>
+            <Text style={styles.bottomBarLabel}>Auction Status</Text>
+            <Text style={styles.bottomBarPrice}>{auctionCountdown}</Text>
+          </View>
 
-        <TouchableOpacity
-          style={[styles.bottomBarButton, checkoutLoading && styles.bottomBarButtonDisabled]}
-          onPress={artwork.is_auction ? handlePlaceBid : handleCheckout}
-          disabled={checkoutLoading}
-        >
-          {checkoutLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.bottomBarButtonText}>
-              {artwork.is_auction ? 'Place Bid' : 'Buy Now'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.bottomBarButton} onPress={handlePlaceBid}>
+            <Text style={styles.bottomBarButtonText}>Place Bid</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ImageViewing
         images={[{ uri: artwork.image_url || '' }]}
@@ -586,6 +507,10 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       color: theme.text,
       marginBottom: 4,
     },
+    buyPanel: {
+      marginTop: 20,
+      marginBottom: 8,
+    },
     shipping: {
       backgroundColor: theme.isDark ? '#2A2236' : '#F3EAFB',
       padding: 18,
@@ -648,9 +573,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       alignItems: 'center',
       justifyContent: 'center',
       minWidth: 120,
-    },
-    bottomBarButtonDisabled: {
-      opacity: 0.7,
     },
     bottomBarButtonText: {
       color: '#fff',

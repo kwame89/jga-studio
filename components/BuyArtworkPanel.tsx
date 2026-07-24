@@ -88,8 +88,12 @@ export function BuyArtworkPanel({
         if (Platform.OS === 'web') {
           window.location.assign(data.url);
         } else {
-          const { Linking } = await import('react-native');
-          await Linking.openURL(data.url);
+          // In-app browser (SFSafariViewController / Chrome Custom Tab) so the
+          // collector stays inside the app and returns when done. The order is
+          // created server-side and marked paid by the Stripe webhook, so
+          // fulfillment does not depend on the browser returning.
+          const WebBrowser = await import('expo-web-browser');
+          await WebBrowser.openBrowserAsync(data.url);
         }
         return;
       }
@@ -308,11 +312,16 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       flexDirection: 'row',
       gap: 10,
     },
+    // minWidth: 0 is required or RNW flex items won't shrink below their
+    // content width — the City/State/ZIP row then overflows the card and ZIP
+    // is pushed off-screen. City gets 2 shares, State and ZIP 1 each.
     rowItem: {
       flex: 2,
+      minWidth: 0,
     },
     rowItemSmall: {
       flex: 1,
+      minWidth: 0,
     },
     input: {
       borderWidth: 1,
