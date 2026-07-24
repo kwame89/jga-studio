@@ -11,9 +11,8 @@
 //
 // GO / NO-GO — the reviewer's checklist; do NOT publish (do NOT remove the
 // draft banner or clear the [[...]] notes) until all of these are true:
-//   ☑ Entity status: Jaygoldingart Studio LLC (registered 2026-07), d/b/a
-//     JGA Studio. Verify the punctuation matches the NJ certificate of
-//     formation exactly (e.g. whether the filing reads "Studio, LLC").
+//   ☑ Entity status: JAYGOLDINGART STUDIO LLC (registered 2026-07, styled in
+//     caps per Jay to match the filing), d/b/a JGA Studio.
 //   □ The contact inbox (notices@jgastudio.art) exists and is monitored.
 //   □ NJ sales-tax registration + checkout tax collection confirmed with an
 //     accountant, and the tax wording matches what checkout actually does.
@@ -51,9 +50,9 @@ export type LegalDocument = {
 // "JGA Studio" is the brand / d.b.a. The terms name the legal entity (that is
 // who the customer contracts with) and tie the brand to it once, then use the
 // brand everywhere else.
-const ENTITY = 'Jaygoldingart Studio LLC';
+const ENTITY = 'JAYGOLDINGART STUDIO LLC';
 const ENTITY_STATUS =
-  'JGA Studio is operated by Jaygoldingart Studio LLC, a New Jersey limited ' +
+  'JGA Studio is operated by JAYGOLDINGART STUDIO LLC, a New Jersey limited ' +
   'liability company, doing business as JGA Studio.';
 // The reviewer specifically advised against a legal@ address (it implies an
 // in-house legal team) and recommended a neutral notices@ inbox for everything.
