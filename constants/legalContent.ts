@@ -11,8 +11,9 @@
 //
 // GO / NO-GO — the reviewer's checklist; do NOT publish (do NOT remove the
 // draft banner or clear the [[...]] notes) until all of these are true:
-//   □ Entity status is accurate (Jay Golding d/b/a JGA Studio until the LLC
-//     is actually formed — do not present the LLC as the operator before then).
+//   ☑ Entity status: Jaygoldingart Studio LLC (registered 2026-07), d/b/a
+//     JGA Studio. Verify the punctuation matches the NJ certificate of
+//     formation exactly (e.g. whether the filing reads "Studio, LLC").
 //   □ The contact inbox (notices@jgastudio.art) exists and is monitored.
 //   □ NJ sales-tax registration + checkout tax collection confirmed with an
 //     accountant, and the tax wording matches what checkout actually does.
@@ -46,15 +47,14 @@ export type LegalDocument = {
 
 // Shared facts, so Terms and Privacy stay consistent.
 //
-// The review advised NOT presenting JGA Studio LLC as the operator until it is
-// actually formed, so the current operator is Jay Golding doing business as JGA
-// Studio. When the LLC is registered, change ENTITY to 'JGA Studio LLC' and
-// ENTITY_STATUS to name it as a New Jersey LLC.
-const ENTITY = 'Jay Golding, doing business as JGA Studio';
+// The LLC registered 2026-07 under the legal name JAYGOLDINGART STUDIO LLC;
+// "JGA Studio" is the brand / d.b.a. The terms name the legal entity (that is
+// who the customer contracts with) and tie the brand to it once, then use the
+// brand everywhere else.
+const ENTITY = 'Jaygoldingart Studio LLC';
 const ENTITY_STATUS =
-  'JGA Studio is operated by Jay Golding, doing business as JGA Studio. ' +
-  '[[When JGA Studio LLC is formed, update this to name the LLC as a New ' +
-  'Jersey limited liability company.]]';
+  'JGA Studio is operated by Jaygoldingart Studio LLC, a New Jersey limited ' +
+  'liability company, doing business as JGA Studio.';
 // The reviewer specifically advised against a legal@ address (it implies an
 // in-house legal team) and recommended a neutral notices@ inbox for everything.
 const CONTACT_EMAIL = 'notices@jgastudio.art';
